@@ -56,6 +56,36 @@ We need to be on the same page with terminology. When communicating, use this la
 - **turn** means one user-to-agent cycle, including follow-up work such as checkpointing.
 - **T3 home** means the base data directory. Runtime state normally lives below its userdata directory.
 
+## Fork workflow
+
+This checkout is a personal fork that is expected to keep receiving upstream T3 Code changes.
+
+- `upstream` is the official `pingdotgg/t3code` repository. `origin` is the user's fork.
+- Keep `main` as a clean, fast-forwardable mirror of `upstream/main`; do not put fork-only commits on it.
+- `personal/main` is the integration branch for the user's maintained customizations. Merge the latest `main` and completed fork feature branches there.
+- Start an independent contribution from updated `main`. Start work that depends on fork-only behavior from `personal/main`.
+- Push only to `origin` unless the user explicitly asks to update upstream or open a PR. Never create a PR implicitly.
+- `codex/mobile-sandbox` introduced the Qiniu mobile sandbox flow and is already integrated into `personal/main`. Preserve the source branch until the user asks to delete it.
+
+This split is intentional: it keeps upstream synchronization mechanical while retaining a stable branch that contains the user's product-specific behavior.
+
+## Fork feature: Qiniu mobile sandboxes
+
+The mobile client is the caller and orchestrator for Qiniu Sandbox. Do not move this startup flow into the Sandbox service or require a rebuilt template unless the user explicitly changes the architecture.
+
+- The implementation is under `apps/mobile/src/features/sandbox/`; credentials are stored with Expo SecureStore.
+- The Sandbox API URL, public sandbox domain, template ID, E2B API key, and OpenAI-compatible endpoint are user-configurable. Never hardcode a region domain from a sandbox list response; prefer the sandbox's returned `domain`, then the configured public-domain fallback.
+- Treat `../fork.sandbox/spec/openapi.yml` as the source of truth for Sandbox API behavior. In particular, do not assume `POST /sandboxes/{id}/connect` returns a temporary envd token that the spec does not promise.
+- Public T3 traffic uses port `8080`; envd command/file access uses the proxied port `49983`.
+- After create/connect, mobile calls envd `process.Process/Start`. It explicitly unsets `T3CODE_PAIRING_TOKEN` and starts `/home/user/t3-server/bin.mjs` in `--mode web`, with T3 state under `/home/user/.t3` and logs at `/home/user/.t3/startup.log`.
+- Do not restore the fixed `t3code-dev` pairing token or depend on `/tmp/t3-stdout.log`. Static startup credentials are stale and one-time pairing credentials must not be reused.
+- For each connection attempt, wait for T3 readiness, run `auth pairing create --json` through envd, write `/home/user/.t3/mobile-pairing.json`, then read that file through envd and connect with its fresh `/pair#token=...` URL.
+- The template must contain T3 Server at `/home/user/t3-server/bin.mjs`, but mobile owns starting or restarting it. This lets older compatible templates continue working without an image rebuild.
+- The real OpenAI key is sent through the platform's injection mechanism. Codex receives placeholder `~/.codex/auth.json` plus generated `~/.codex/config.toml` so provider discovery works; never persist the real injected key in those files.
+- Keep Codex, Claude, and OpenCode provider behavior in mind when touching this flow. The placeholder Codex authentication is required for Codex to appear as an available provider.
+
+Focused coverage for this feature lives in `apps/mobile/src/features/sandbox/useSandboxApi.test.ts`. After behavior changes, also typecheck `@t3tools/mobile` and perform the repository-required integrated mobile verification when a compatible simulator/emulator client is available.
+
 ## The three ways to hurt yourself
 
 1. **Killing by pattern.** Never `pkill -f`, `pgrep | kill`, or `kill` a PID you found by matching a name, path, or worktree string. Your own agent process has this worktree's path in its argv, and this machine runs several other dev servers at once. Kill only a PID you captured at spawn, or the owner of your port from `ss -H -ltnp` after confirming `/proc/<pid>/cwd` is your worktree.
