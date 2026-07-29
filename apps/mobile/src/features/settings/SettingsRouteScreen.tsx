@@ -127,6 +127,11 @@ function LocalSettingsRouteScreen() {
             value={`${environmentCount}`}
             target="SettingsEnvironments"
           />
+          <SettingsRow
+            icon="cloud"
+            label="Sandbox Credentials"
+            target="SettingsSandboxCredentials"
+          />
         </SettingsSection>
 
         <GeneralSettingsSection />
@@ -480,6 +485,11 @@ function ConfiguredSettingsRouteScreen() {
             label="Environments"
             value={`${environmentCount}`}
             target="SettingsEnvironments"
+          />
+          <SettingsRow
+            icon="cloud"
+            label="Sandbox Credentials"
+            target="SettingsSandboxCredentials"
           />
           <SettingsSwitchRow
             icon="bell.badge"

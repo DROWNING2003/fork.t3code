@@ -47,6 +47,9 @@ import { SettingsAuthRouteScreen } from "./features/settings/SettingsAuthRouteSc
 import { SettingsEnvironmentsRouteScreen } from "./features/settings/SettingsEnvironmentsRouteScreen";
 import { SettingsLegalRouteScreen } from "./features/settings/SettingsLegalRouteScreen";
 import { SettingsRouteScreen } from "./features/settings/SettingsRouteScreen";
+import { SandboxRouteScreen } from "./features/sandbox/SandboxRouteScreen";
+import { SandboxNewSheet } from "./features/sandbox/SandboxNewSheet";
+import { SettingsSandboxCredentials } from "./features/sandbox/SettingsSandboxCredentials";
 import { ShowcaseCaptureCoordinator } from "./features/showcase/ShowcaseCaptureCoordinator";
 import {
   SettingsLegalDocumentCloseHeaderButton,
@@ -194,6 +197,13 @@ const SettingsSheetStack = createNativeStackNavigator({
       linking: "waitlist",
       options: {
         title: "Sign in",
+      },
+    }),
+    SettingsSandboxCredentials: createNativeStackScreen({
+      screen: SettingsSandboxCredentials,
+      linking: "sandbox-credentials",
+      options: {
+        title: "Sandbox Credentials",
       },
     }),
   },
@@ -523,6 +533,29 @@ export const RootStack = createNativeStackNavigator({
     ConnectionsNew: createNativeStackScreen({
       screen: ConnectionsNewRouteScreen,
       linking: "connections/new",
+      options: {
+        presentation: "formSheet",
+        sheetAllowedDetents: [0.55, 0.7],
+        sheetGrabberVisible: true,
+      },
+    }),
+    Sandboxes: createNativeStackScreen({
+      screen: SandboxRouteScreen,
+      linking: "sandboxes",
+      options: {
+        title: "Sandboxes",
+        ...(Platform.OS === "android"
+          ? { presentation: "card" as const, headerShown: false }
+          : {
+              presentation: "formSheet" as const,
+              sheetAllowedDetents: [0.55, 0.7],
+              sheetGrabberVisible: true,
+            }),
+      },
+    }),
+    SandboxNew: createNativeStackScreen({
+      screen: SandboxNewSheet,
+      linking: "sandboxes/new",
       options: {
         presentation: "formSheet",
         sheetAllowedDetents: [0.55, 0.7],

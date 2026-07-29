@@ -2,6 +2,7 @@ export type SettingsSheetTarget =
   | "SettingsEnvironments"
   | "SettingsArchive"
   | "SettingsAppearance"
-  | "SettingsClientStorage";
+  | "SettingsClientStorage"
+  | "SettingsSandboxCredentials";
 
 export type SettingsLegalDocumentTarget = "SettingsLegal";

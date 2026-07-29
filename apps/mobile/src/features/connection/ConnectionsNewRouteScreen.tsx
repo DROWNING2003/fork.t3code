@@ -214,48 +214,57 @@ export function ConnectionsNewRouteScreen({
               </View>
             )
           ) : (
-            <View collapsable={false} className="gap-4 rounded-[24px] bg-card p-4">
-              <View collapsable={false} className="gap-1.5">
-                <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
-                  Host
-                </Text>
-                <TextInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  keyboardType="url"
-                  placeholder="192.168.1.100:8080"
-                  value={hostInput}
-                  onChangeText={handleHostChange}
-                  className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+            <>
+              <View collapsable={false} className="gap-4 rounded-[24px] bg-card p-4">
+                <View collapsable={false} className="gap-1.5">
+                  <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                    Host
+                  </Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="url"
+                    placeholder="192.168.1.100:8080"
+                    value={hostInput}
+                    onChangeText={handleHostChange}
+                    className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+                  />
+                </View>
+
+                <View collapsable={false} className="gap-1.5">
+                  <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                    Pairing code
+                  </Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholder="abc-123-xyz"
+                    value={codeInput}
+                    onChangeText={handleCodeChange}
+                    className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+                  />
+                </View>
+
+                {pairingConnectionError ? <ErrorBanner message={pairingConnectionError} /> : null}
+
+                <ConnectionSheetButton
+                  icon="plus"
+                  label={isSubmitting ? "Pairing..." : "Add environment"}
+                  disabled={connectDisabled}
+                  tone="primary"
+                  onPress={() => {
+                    void handleSubmit();
+                  }}
                 />
               </View>
-
-              <View collapsable={false} className="gap-1.5">
-                <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
-                  Pairing code
-                </Text>
-                <TextInput
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  placeholder="abc-123-xyz"
-                  value={codeInput}
-                  onChangeText={handleCodeChange}
-                  className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
-                />
-              </View>
-
-              {pairingConnectionError ? <ErrorBanner message={pairingConnectionError} /> : null}
 
               <ConnectionSheetButton
-                icon="plus"
-                label={isSubmitting ? "Pairing..." : "Add environment"}
-                disabled={connectDisabled}
-                tone="primary"
-                onPress={() => {
-                  void handleSubmit();
-                }}
+                icon="cloud"
+                label="Manage Sandboxes"
+                tone="secondary"
+                onPress={() => navigation.navigate("Sandboxes" as never)}
               />
-            </View>
+            </>
           )}
         </View>
       </ScrollView>
