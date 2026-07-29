@@ -1,4 +1,4 @@
-import { SettingsIcon } from "lucide-react";
+import { CloudIcon, SettingsIcon } from "lucide-react";
 import { memo, useCallback } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
@@ -111,12 +111,15 @@ function T3Wordmark() {
 export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   const navigate = useNavigate();
   const { isMobile, setOpenMobile } = useSidebar();
-  const handleSettingsClick = useCallback(() => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
-    void navigate({ to: "/settings" });
-  }, [isMobile, navigate, setOpenMobile]);
+  const handleNav = useCallback(
+    (to: "/settings" | "/sandboxes") => {
+      if (isMobile) {
+        setOpenMobile(false);
+      }
+      void navigate({ to });
+    },
+    [isMobile, navigate, setOpenMobile],
+  );
 
   return (
     <SidebarFooter className="p-2">
@@ -124,7 +127,13 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
       <SidebarUpdatePill />
       <SidebarMenu>
         <SidebarMenuItem>
-          <SidebarMenuButton onClick={handleSettingsClick}>
+          <SidebarMenuButton onClick={() => handleNav("/sandboxes")}>
+            <CloudIcon />
+            <span>Sandbox</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={() => handleNav("/settings")}>
             <SettingsIcon />
             <span>Settings</span>
           </SidebarMenuButton>

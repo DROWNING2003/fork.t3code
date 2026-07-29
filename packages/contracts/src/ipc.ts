@@ -1,3 +1,4 @@
+import type { SandboxCredentials } from "./sandbox.ts";
 import type {
   VcsCreateRefInput,
   VcsCreateRefResult,
@@ -987,6 +988,9 @@ export interface DesktopBridge {
   getConnectionCatalog?: () => Promise<string | null>;
   setConnectionCatalog?: (catalog: string) => Promise<boolean>;
   clearConnectionCatalog?: () => Promise<void>;
+  getSandboxCredentials?: () => Promise<SandboxCredentials | null>;
+  setSandboxCredentials?: (creds: SandboxCredentials) => Promise<void>;
+  clearSandboxCredentials?: () => Promise<void>;
   discoverSshHosts: () => Promise<readonly DesktopDiscoveredSshHost[]>;
   ensureSshEnvironment: (
     target: DesktopSshEnvironmentTarget,

@@ -162,6 +162,19 @@ const buildCmd = Command.make(
         }),
       );
 
+      const webPublic = path.join(repoRoot, "apps/web/public");
+      if (yield* fs.exists(path.join(serverDir, "dist/bin.mjs"))) {
+        const tarball = path.join(webPublic, "t3-server-dist.tar.gz");
+        yield* runCommand(
+          ChildProcess.make(
+            "tar",
+            ["-czf", tarball, "--exclude=*.map", "--exclude=dist/client", "-C", serverDir, "dist"],
+            { stdout: "ignore", stderr: "inherit", shell: false },
+          ),
+        );
+        yield* Effect.log("[cli] Created t3-server-dist.tar.gz");
+      }
+
       const webDist = path.join(repoRoot, "apps/web/dist");
       const clientTarget = path.join(serverDir, "dist/client");
 

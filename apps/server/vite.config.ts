@@ -6,13 +6,18 @@ import { loadRepoEnv } from "../../scripts/lib/public-config.ts";
 import packageJson from "./package.json" with { type: "json" };
 
 const bundledPackagePrefixes = [
+  "effect",
   "@pierre/diffs",
   "@t3tools/",
   "effect-acp",
   "effect-codex-app-server",
 ];
 
+/** Packages that cannot be bundled (native addons, platform-specific). */
+const externalPackages = new Set(["node-pty"]);
+
 export function shouldBundleCliDependency(id: string): boolean {
+  if (externalPackages.has(id)) return false;
   return bundledPackagePrefixes.some((prefix) => id.startsWith(prefix));
 }
 

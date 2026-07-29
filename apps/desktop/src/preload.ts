@@ -51,6 +51,10 @@ contextBridge.exposeInMainWorld("desktopBridge", {
   setConnectionCatalog: (catalog) =>
     ipcRenderer.invoke(IpcChannels.SET_CONNECTION_CATALOG_CHANNEL, catalog),
   clearConnectionCatalog: () => ipcRenderer.invoke(IpcChannels.CLEAR_CONNECTION_CATALOG_CHANNEL),
+  getSandboxCredentials: () => ipcRenderer.invoke(IpcChannels.GET_SANDBOX_CREDENTIALS_CHANNEL),
+  setSandboxCredentials: (creds) =>
+    ipcRenderer.invoke(IpcChannels.SET_SANDBOX_CREDENTIALS_CHANNEL, creds),
+  clearSandboxCredentials: () => ipcRenderer.invoke(IpcChannels.CLEAR_SANDBOX_CREDENTIALS_CHANNEL),
   discoverSshHosts: () => ipcRenderer.invoke(IpcChannels.DISCOVER_SSH_HOSTS_CHANNEL),
   ensureSshEnvironment: async (target, options) =>
     unwrapEnsureSshEnvironmentResult(

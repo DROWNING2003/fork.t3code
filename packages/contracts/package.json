@@ -18,6 +18,10 @@
     "./relay": {
       "types": "./src/relay.ts",
       "import": "./src/relay.ts"
+    },
+    "./sandbox": {
+      "types": "./src/sandbox.ts",
+      "import": "./src/sandbox.ts"
     }
   },
   "scripts": {

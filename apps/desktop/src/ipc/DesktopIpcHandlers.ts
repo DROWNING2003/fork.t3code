@@ -8,6 +8,11 @@ import {
   setConnectionCatalog,
 } from "./methods/connectionCatalog.ts";
 import {
+  clearSandboxCredentials,
+  getSandboxCredentials,
+  setSandboxCredentials,
+} from "./methods/sandboxCredentials.ts";
+import {
   getAdvertisedEndpoints,
   getServerExposureState,
   setServerExposureMode,
@@ -58,6 +63,10 @@ export const installDesktopIpcHandlers = Effect.fn("desktop.ipc.installHandlers"
   yield* ipc.handle(getConnectionCatalog);
   yield* ipc.handle(setConnectionCatalog);
   yield* ipc.handle(clearConnectionCatalog);
+
+  yield* ipc.handle(getSandboxCredentials);
+  yield* ipc.handle(setSandboxCredentials);
+  yield* ipc.handle(clearSandboxCredentials);
 
   yield* ipc.handle(discoverSshHosts);
   yield* ipc.handle(ensureSshEnvironment);

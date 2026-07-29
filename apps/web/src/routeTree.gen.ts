@@ -13,8 +13,10 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PairRouteImport } from './routes/pair'
 import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as ChatRouteImport } from './routes/_chat'
+import { Route as SandboxesIndexRouteImport } from './routes/sandboxes.index'
 import { Route as ChatIndexRouteImport } from './routes/_chat.index'
 import { Route as SettingsSourceControlRouteImport } from './routes/settings.source-control'
+import { Route as SettingsSandboxRouteImport } from './routes/settings.sandbox'
 import { Route as SettingsProvidersRouteImport } from './routes/settings.providers'
 import { Route as SettingsKeybindingsRouteImport } from './routes/settings.keybindings'
 import { Route as SettingsGeneralRouteImport } from './routes/settings.general'
@@ -23,6 +25,7 @@ import { Route as SettingsConnectionsRouteImport } from './routes/settings.conne
 import { Route as SettingsBetaRouteImport } from './routes/settings.beta'
 import { Route as SettingsArchivedRouteImport } from './routes/settings.archived'
 import { Route as SettingsAppearanceRouteImport } from './routes/settings.appearance'
+import { Route as SandboxesNewRouteImport } from './routes/sandboxes.new'
 import { Route as ConnectCallbackRouteImport } from './routes/connect_.callback'
 import { Route as ChatDraftDraftIdRouteImport } from './routes/_chat.draft.$draftId'
 import { Route as ChatEnvironmentIdThreadIdRouteImport } from './routes/_chat.$environmentId.$threadId'
@@ -46,6 +49,11 @@ const ChatRoute = ChatRouteImport.update({
   id: '/_chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SandboxesIndexRoute = SandboxesIndexRouteImport.update({
+  id: '/sandboxes/',
+  path: '/sandboxes/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChatIndexRoute = ChatIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -54,6 +62,11 @@ const ChatIndexRoute = ChatIndexRouteImport.update({
 const SettingsSourceControlRoute = SettingsSourceControlRouteImport.update({
   id: '/source-control',
   path: '/source-control',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsSandboxRoute = SettingsSandboxRouteImport.update({
+  id: '/sandbox',
+  path: '/sandbox',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsProvidersRoute = SettingsProvidersRouteImport.update({
@@ -96,6 +109,11 @@ const SettingsAppearanceRoute = SettingsAppearanceRouteImport.update({
   path: '/appearance',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SandboxesNewRoute = SandboxesNewRouteImport.update({
+  id: '/sandboxes/new',
+  path: '/sandboxes/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConnectCallbackRoute = ConnectCallbackRouteImport.update({
   id: '/connect_/callback',
   path: '/connect/callback',
@@ -119,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/pair': typeof PairRoute
   '/settings': typeof SettingsRouteWithChildren
   '/connect/callback': typeof ConnectCallbackRoute
+  '/sandboxes/new': typeof SandboxesNewRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/archived': typeof SettingsArchivedRoute
   '/settings/beta': typeof SettingsBetaRoute
@@ -127,7 +146,9 @@ export interface FileRoutesByFullPath {
   '/settings/general': typeof SettingsGeneralRoute
   '/settings/keybindings': typeof SettingsKeybindingsRoute
   '/settings/providers': typeof SettingsProvidersRoute
+  '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/source-control': typeof SettingsSourceControlRoute
+  '/sandboxes/': typeof SandboxesIndexRoute
   '/$environmentId/$threadId': typeof ChatEnvironmentIdThreadIdRoute
   '/draft/$draftId': typeof ChatDraftDraftIdRoute
 }
@@ -136,6 +157,7 @@ export interface FileRoutesByTo {
   '/pair': typeof PairRoute
   '/settings': typeof SettingsRouteWithChildren
   '/connect/callback': typeof ConnectCallbackRoute
+  '/sandboxes/new': typeof SandboxesNewRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/archived': typeof SettingsArchivedRoute
   '/settings/beta': typeof SettingsBetaRoute
@@ -144,8 +166,10 @@ export interface FileRoutesByTo {
   '/settings/general': typeof SettingsGeneralRoute
   '/settings/keybindings': typeof SettingsKeybindingsRoute
   '/settings/providers': typeof SettingsProvidersRoute
+  '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/source-control': typeof SettingsSourceControlRoute
   '/': typeof ChatIndexRoute
+  '/sandboxes': typeof SandboxesIndexRoute
   '/$environmentId/$threadId': typeof ChatEnvironmentIdThreadIdRoute
   '/draft/$draftId': typeof ChatDraftDraftIdRoute
 }
@@ -156,6 +180,7 @@ export interface FileRoutesById {
   '/pair': typeof PairRoute
   '/settings': typeof SettingsRouteWithChildren
   '/connect_/callback': typeof ConnectCallbackRoute
+  '/sandboxes/new': typeof SandboxesNewRoute
   '/settings/appearance': typeof SettingsAppearanceRoute
   '/settings/archived': typeof SettingsArchivedRoute
   '/settings/beta': typeof SettingsBetaRoute
@@ -164,8 +189,10 @@ export interface FileRoutesById {
   '/settings/general': typeof SettingsGeneralRoute
   '/settings/keybindings': typeof SettingsKeybindingsRoute
   '/settings/providers': typeof SettingsProvidersRoute
+  '/settings/sandbox': typeof SettingsSandboxRoute
   '/settings/source-control': typeof SettingsSourceControlRoute
   '/_chat/': typeof ChatIndexRoute
+  '/sandboxes/': typeof SandboxesIndexRoute
   '/_chat/$environmentId/$threadId': typeof ChatEnvironmentIdThreadIdRoute
   '/_chat/draft/$draftId': typeof ChatDraftDraftIdRoute
 }
@@ -177,6 +204,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/settings'
     | '/connect/callback'
+    | '/sandboxes/new'
     | '/settings/appearance'
     | '/settings/archived'
     | '/settings/beta'
@@ -185,7 +213,9 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/keybindings'
     | '/settings/providers'
+    | '/settings/sandbox'
     | '/settings/source-control'
+    | '/sandboxes/'
     | '/$environmentId/$threadId'
     | '/draft/$draftId'
   fileRoutesByTo: FileRoutesByTo
@@ -194,6 +224,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/settings'
     | '/connect/callback'
+    | '/sandboxes/new'
     | '/settings/appearance'
     | '/settings/archived'
     | '/settings/beta'
@@ -202,8 +233,10 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/keybindings'
     | '/settings/providers'
+    | '/settings/sandbox'
     | '/settings/source-control'
     | '/'
+    | '/sandboxes'
     | '/$environmentId/$threadId'
     | '/draft/$draftId'
   id:
@@ -213,6 +246,7 @@ export interface FileRouteTypes {
     | '/pair'
     | '/settings'
     | '/connect_/callback'
+    | '/sandboxes/new'
     | '/settings/appearance'
     | '/settings/archived'
     | '/settings/beta'
@@ -221,8 +255,10 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/keybindings'
     | '/settings/providers'
+    | '/settings/sandbox'
     | '/settings/source-control'
     | '/_chat/'
+    | '/sandboxes/'
     | '/_chat/$environmentId/$threadId'
     | '/_chat/draft/$draftId'
   fileRoutesById: FileRoutesById
@@ -233,6 +269,8 @@ export interface RootRouteChildren {
   PairRoute: typeof PairRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   ConnectCallbackRoute: typeof ConnectCallbackRoute
+  SandboxesNewRoute: typeof SandboxesNewRoute
+  SandboxesIndexRoute: typeof SandboxesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -265,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sandboxes/': {
+      id: '/sandboxes/'
+      path: '/sandboxes'
+      fullPath: '/sandboxes/'
+      preLoaderRoute: typeof SandboxesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_chat/': {
       id: '/_chat/'
       path: '/'
@@ -277,6 +322,13 @@ declare module '@tanstack/react-router' {
       path: '/source-control'
       fullPath: '/settings/source-control'
       preLoaderRoute: typeof SettingsSourceControlRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/sandbox': {
+      id: '/settings/sandbox'
+      path: '/sandbox'
+      fullPath: '/settings/sandbox'
+      preLoaderRoute: typeof SettingsSandboxRouteImport
       parentRoute: typeof SettingsRoute
     }
     '/settings/providers': {
@@ -335,6 +387,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAppearanceRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/sandboxes/new': {
+      id: '/sandboxes/new'
+      path: '/sandboxes/new'
+      fullPath: '/sandboxes/new'
+      preLoaderRoute: typeof SandboxesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/connect_/callback': {
       id: '/connect_/callback'
       path: '/connect/callback'
@@ -382,6 +441,7 @@ interface SettingsRouteChildren {
   SettingsGeneralRoute: typeof SettingsGeneralRoute
   SettingsKeybindingsRoute: typeof SettingsKeybindingsRoute
   SettingsProvidersRoute: typeof SettingsProvidersRoute
+  SettingsSandboxRoute: typeof SettingsSandboxRoute
   SettingsSourceControlRoute: typeof SettingsSourceControlRoute
 }
 
@@ -394,6 +454,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsGeneralRoute: SettingsGeneralRoute,
   SettingsKeybindingsRoute: SettingsKeybindingsRoute,
   SettingsProvidersRoute: SettingsProvidersRoute,
+  SettingsSandboxRoute: SettingsSandboxRoute,
   SettingsSourceControlRoute: SettingsSourceControlRoute,
 }
 
@@ -407,6 +468,8 @@ const rootRouteChildren: RootRouteChildren = {
   PairRoute: PairRoute,
   SettingsRoute: SettingsRouteWithChildren,
   ConnectCallbackRoute: ConnectCallbackRoute,
+  SandboxesNewRoute: SandboxesNewRoute,
+  SandboxesIndexRoute: SandboxesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

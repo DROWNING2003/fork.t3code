@@ -35,3 +35,4 @@ node_modules/
 *.log
 .env*
 !.env.example
+apps/web/public/t3-server-dist.tar.gz
