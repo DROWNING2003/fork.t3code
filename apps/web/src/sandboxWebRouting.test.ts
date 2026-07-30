@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   resolveSandboxWebRestrictedPathRedirect,
+  resolveSandboxWebNoProjectsAction,
   shouldRedirectSandboxWebEnvironment,
   shouldRedirectSandboxWebChatIndex,
 } from "./sandboxWebRouting";
@@ -61,4 +62,14 @@ describe("shouldRedirectSandboxWebEnvironment", () => {
       expect(shouldRedirectSandboxWebEnvironment({ catalogReady: true, displayUrl })).toBe(true);
     },
   );
+});
+
+describe("resolveSandboxWebNoProjectsAction", () => {
+  it("keeps the public empty state in the sandbox workflow", () => {
+    expect(resolveSandboxWebNoProjectsAction("sandbox")).toBe("sandboxes");
+  });
+
+  it("keeps the local add-project action on the full surface", () => {
+    expect(resolveSandboxWebNoProjectsAction("full")).toBe("add-project");
+  });
 });

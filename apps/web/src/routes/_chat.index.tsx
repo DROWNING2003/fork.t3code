@@ -1,7 +1,7 @@
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, useNavigate } from "@tanstack/react-router";
 import { isSandboxUrl } from "@t3tools/shared/sandbox";
-import { LinkIcon, PlusIcon, RotateCcwIcon } from "lucide-react";
+import { CloudIcon, LinkIcon, PlusIcon, RotateCcwIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { openCommandPalette } from "../commandPaletteBus";
@@ -19,8 +19,11 @@ import { useEnvironments } from "../state/environments";
 import { APP_DISPLAY_NAME } from "~/branding";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { cn } from "~/lib/utils";
-import { shouldRedirectSandboxWebChatIndex } from "~/sandboxWebRouting";
-import { isSandboxOnlyWeb } from "~/webSurface";
+import {
+  resolveSandboxWebNoProjectsAction,
+  shouldRedirectSandboxWebChatIndex,
+} from "~/sandboxWebRouting";
+import { isSandboxOnlyWeb, webSurface } from "~/webSurface";
 import { COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS } from "~/workspaceTitlebar";
 
 function ChatIndexRouteView() {
@@ -141,7 +144,11 @@ function DraftStartError({ onRetry }: { readonly onRetry: () => void }) {
 }
 
 function NoProjectsHero() {
+  const navigate = useNavigate();
   const openAddProject = useCallback(() => openCommandPalette({ open: "add-project" }), []);
+  const action = resolveSandboxWebNoProjectsAction(webSurface);
+  const openSandboxes = useCallback(() => void navigate({ to: "/sandboxes" }), [navigate]);
+  const isSandboxAction = action === "sandboxes";
 
   return (
     <SidebarInset className="h-dvh min-h-0 overflow-hidden overscroll-y-none bg-background text-foreground">
@@ -150,15 +157,21 @@ function NoProjectsHero() {
           <div className="w-full max-w-lg px-8 py-12">
             <EmptyHeader className="max-w-none">
               <EmptyTitle className="text-foreground text-2xl sm:text-3xl">
-                What should we work on?
+                {isSandboxAction ? "沙箱中还没有项目" : "What should we work on?"}
               </EmptyTitle>
               <EmptyDescription className="mt-2 text-sm text-muted-foreground/78">
-                Add a project to start your first thread.
+                {isSandboxAction
+                  ? "请检查沙箱状态，或创建一个新的沙箱。"
+                  : "Add a project to start your first thread."}
               </EmptyDescription>
               <div className="mt-6 flex justify-center">
-                <Button size="sm" onClick={openAddProject}>
-                  <PlusIcon className="size-4" />
-                  Add project
+                <Button size="sm" onClick={isSandboxAction ? openSandboxes : openAddProject}>
+                  {isSandboxAction ? (
+                    <CloudIcon className="size-4" />
+                  ) : (
+                    <PlusIcon className="size-4" />
+                  )}
+                  {isSandboxAction ? "查看沙箱" : "Add project"}
                 </Button>
               </div>
             </EmptyHeader>

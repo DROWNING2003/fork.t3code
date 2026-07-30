@@ -1,3 +1,6 @@
+import { isSandboxUrl } from "@t3tools/shared/sandbox";
+import type { WebSurface } from "./webSurface";
+
 export function shouldRedirectSandboxWebChatIndex(input: {
   readonly catalogReady: boolean;
   readonly sandboxCount: number;
@@ -21,4 +24,9 @@ export function shouldRedirectSandboxWebEnvironment(input: {
 }): boolean {
   return input.catalogReady && (input.displayUrl === null || !isSandboxUrl(input.displayUrl));
 }
-import { isSandboxUrl } from "@t3tools/shared/sandbox";
+
+export function resolveSandboxWebNoProjectsAction(
+  surface: WebSurface,
+): "add-project" | "sandboxes" {
+  return surface === "sandbox" ? "sandboxes" : "add-project";
+}
