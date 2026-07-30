@@ -49,12 +49,36 @@ function ChatIndexRouteView() {
  * end. Falls back to an add-project hero when no project exists yet.
  */
 function IndexDraftLanding() {
-  const projects = useProjects();
-  const threads = useThreadShells();
+  const allProjects = useProjects();
+  const allThreads = useThreadShells();
+  const { environments } = useEnvironments();
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
   const handleNewThread = useNewThreadHandler();
   const startingRef = useRef(false);
   const [startState, setStartState] = useState({ failed: false, retryRequest: 0 });
+  const sandboxEnvironmentIds = useMemo(
+    () =>
+      new Set(
+        environments
+          .filter((environment) => environment.displayUrl && isSandboxUrl(environment.displayUrl))
+          .map((environment) => environment.environmentId),
+      ),
+    [environments],
+  );
+  const projects = useMemo(
+    () =>
+      isSandboxOnlyWeb
+        ? allProjects.filter((project) => sandboxEnvironmentIds.has(project.environmentId))
+        : allProjects,
+    [allProjects, sandboxEnvironmentIds],
+  );
+  const threads = useMemo(
+    () =>
+      isSandboxOnlyWeb
+        ? allThreads.filter((thread) => sandboxEnvironmentIds.has(thread.environmentId))
+        : allThreads,
+    [allThreads, sandboxEnvironmentIds],
+  );
 
   const mostRecentProject = useMemo(
     () =>

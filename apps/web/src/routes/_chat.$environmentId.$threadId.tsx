@@ -14,12 +14,23 @@ import {
 } from "../state/entities";
 import { useEnvironmentQuery } from "../state/query";
 import { environmentShell } from "../state/shell";
+import { useEnvironment, useEnvironments } from "../state/environments";
+import { shouldRedirectSandboxWebEnvironment } from "../sandboxWebRouting";
+import { isSandboxOnlyWeb } from "../webSurface";
 
 function ChatThreadRouteView() {
   const navigate = useNavigate();
   const threadRef = Route.useParams({
     select: (params) => resolveThreadRouteRef(params),
   });
+  const environment = useEnvironment(threadRef?.environmentId ?? null);
+  const { isReady: environmentCatalogReady } = useEnvironments();
+  const shouldRedirect =
+    isSandboxOnlyWeb &&
+    shouldRedirectSandboxWebEnvironment({
+      catalogReady: environmentCatalogReady,
+      displayUrl: environment?.displayUrl ?? null,
+    });
   const shell = useEnvironmentQuery(
     threadRef === null ? null : environmentShell.stateAtom(threadRef.environmentId),
   );
@@ -52,6 +63,13 @@ function ChatThreadRouteView() {
   const environmentHasAnyThreads = environmentHasServerThreads || environmentHasDraftThreads;
 
   useEffect(() => {
+    if (!shouldRedirect) {
+      return;
+    }
+    void navigate({ to: "/sandboxes", replace: true });
+  }, [navigate, shouldRedirect]);
+
+  useEffect(() => {
     if (!threadRef || !bootstrapComplete) {
       return;
     }
@@ -68,7 +86,7 @@ function ChatThreadRouteView() {
     finalizePromotedDraftThreadByRef(threadRef);
   }, [draftThread, serverThreadStarted, threadRef]);
 
-  if (!threadRef || renderState !== "ready") {
+  if (shouldRedirect || !threadRef || renderState !== "ready") {
     return null;
   }
 

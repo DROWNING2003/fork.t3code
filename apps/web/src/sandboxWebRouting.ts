@@ -14,3 +14,11 @@ export function resolveSandboxWebRestrictedPathRedirect(pathname: string): strin
   }
   return null;
 }
+
+export function shouldRedirectSandboxWebEnvironment(input: {
+  readonly catalogReady: boolean;
+  readonly displayUrl: string | null;
+}): boolean {
+  return input.catalogReady && (input.displayUrl === null || !isSandboxUrl(input.displayUrl));
+}
+import { isSandboxUrl } from "@t3tools/shared/sandbox";

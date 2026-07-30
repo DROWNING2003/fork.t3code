@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   resolveSandboxWebRestrictedPathRedirect,
+  shouldRedirectSandboxWebEnvironment,
   shouldRedirectSandboxWebChatIndex,
 } from "./sandboxWebRouting";
 
@@ -31,6 +32,33 @@ describe("resolveSandboxWebRestrictedPathRedirect", () => {
     "allows sandbox workflow path %s",
     (pathname) => {
       expect(resolveSandboxWebRestrictedPathRedirect(pathname)).toBeNull();
+    },
+  );
+});
+
+describe("shouldRedirectSandboxWebEnvironment", () => {
+  it("waits for the catalog before rejecting an environment", () => {
+    expect(
+      shouldRedirectSandboxWebEnvironment({
+        catalogReady: false,
+        displayUrl: "https://1-abc.example.com",
+      }),
+    ).toBe(false);
+  });
+
+  it("allows a sandbox environment", () => {
+    expect(
+      shouldRedirectSandboxWebEnvironment({
+        catalogReady: true,
+        displayUrl: "https://1-abc.example.com",
+      }),
+    ).toBe(false);
+  });
+
+  it.each([null, "https://localhost:8080", "https://remote.example.com"])(
+    "rejects a non-sandbox environment URL %s",
+    (displayUrl) => {
+      expect(shouldRedirectSandboxWebEnvironment({ catalogReady: true, displayUrl })).toBe(true);
     },
   );
 });

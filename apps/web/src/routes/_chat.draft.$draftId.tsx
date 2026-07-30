@@ -11,12 +11,24 @@ import { SidebarInset } from "../components/ui/sidebar";
 import { waitForDraftHeroTransition } from "../components/chat/draftHeroTransition";
 import { buildThreadRouteParams } from "../threadRoutes";
 import { useThread, useThreadRefs } from "../state/entities";
+import { useEnvironment, useEnvironments } from "../state/environments";
+import { shouldRedirectSandboxWebEnvironment } from "../sandboxWebRouting";
+import { isSandboxOnlyWeb } from "../webSurface";
 
 function DraftChatThreadRouteView() {
   const navigate = useNavigate();
   const { draftId: rawDraftId } = Route.useParams();
   const draftId = DraftId.make(rawDraftId);
   const draftSession = useComposerDraftStore((store) => store.getDraftSession(draftId));
+  const environment = useEnvironment(draftSession?.environmentId ?? null);
+  const { isReady: environmentCatalogReady } = useEnvironments();
+  const shouldRedirect =
+    isSandboxOnlyWeb &&
+    draftSession !== null &&
+    shouldRedirectSandboxWebEnvironment({
+      catalogReady: environmentCatalogReady,
+      displayUrl: environment?.displayUrl ?? null,
+    });
   const threadRefs = useThreadRefs();
   const inferredThreadRef = draftSession
     ? (threadRefs.find(
@@ -29,6 +41,13 @@ function DraftChatThreadRouteView() {
   const serverThread = useThread(serverThreadRef);
   const serverThreadStarted = threadHasStarted(serverThread);
   const canonicalThreadRef = serverThreadStarted ? serverThreadRef : null;
+
+  useEffect(() => {
+    if (!shouldRedirect) {
+      return;
+    }
+    void navigate({ to: "/sandboxes", replace: true });
+  }, [navigate, shouldRedirect]);
 
   useEffect(() => {
     if (!inferredThreadRef || draftSession?.promotedTo) {
@@ -66,7 +85,7 @@ function DraftChatThreadRouteView() {
     void navigate({ to: "/", replace: true });
   }, [canonicalThreadRef, draftSession, navigate]);
 
-  if (!draftSession) {
+  if (shouldRedirect || !draftSession) {
     return null;
   }
 
