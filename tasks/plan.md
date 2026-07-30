@@ -10,7 +10,7 @@ Create a separate public Boundly web deployment that reuses `apps/web` but expos
 - Sandbox-only mode bypasses the primary local-server authentication bootstrap. It owns no local server and connects only through sandbox-generated pairing URLs.
 - Sandbox API and provider credentials remain in the current browser-local credential store. They are never put into the bundle, deployment configuration, or a server-side database.
 - Sandbox-only mode permits sandbox list, creation, sandbox credentials, and chat routes for connected sandbox environments. Local-project, generic connection, relay/Connect, and general settings entry points are hidden and redirected away.
-- The deploy target is a separate Vercel project (or equivalent) configured with the same `apps/web` root and `VITE_BOUNDLY_WEB_SURFACE=sandbox`. Domain and deployment credentials remain operator configuration, not source code.
+- The deploy target is a separate Vercel project rooted at `apps/web`, with `personal/main` as its production branch and `VITE_BOUNDLY_WEB_SURFACE=sandbox`. Its apex domain is `drowning.top`; domain and deployment credentials remain operator configuration, not source code.
 
 ## Commands
 
@@ -43,4 +43,11 @@ Create a separate public Boundly web deployment that reuses `apps/web` but expos
 
 ## Open Questions
 
-- Which Boundly domain and deployment provider project should receive the sandbox-only build? This only blocks the final deployment configuration; it does not block the application slice.
+- None. The standalone Vercel project will publish the sandbox-only build at `drowning.top`.
+
+## Deployment Setup
+
+- Import the fork into a separate Vercel project with `apps/web` as its Root Directory and `personal/main` as its Production Branch.
+- Set `VITE_BOUNDLY_WEB_SURFACE=sandbox` for both Preview and Production before the first Git deployment. This enables Git deployments for this project while preserving the upstream project's disabled setting.
+- Add `drowning.top` as the project domain. Set only the DNS records Vercel displays; do not move nameservers unless the entire DNS zone is intentionally moving.
+- Do not configure `VITE_HTTP_URL`, `VITE_WS_URL`, sandbox API keys, provider keys, pairing tokens, or deployment tokens as public build variables.

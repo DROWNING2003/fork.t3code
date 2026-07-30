@@ -52,8 +52,8 @@
 
 **Acceptance criteria:**
 
-- [ ] Deployment instructions identify a separate project with the sandbox surface variable.
-- [ ] No production URL, API key, or deployment token is committed.
+- [x] Deployment instructions identify a separate Vercel project with the sandbox surface variable.
+- [x] No production URL, API key, or deployment token is committed.
 - [ ] A later CI workflow can build and publish the selected project without impacting existing hosted Web.
 
 **Verification:** build with the surface variable and configuration review
