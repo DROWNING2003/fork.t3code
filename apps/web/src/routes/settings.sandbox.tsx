@@ -178,7 +178,7 @@ function SandboxCredentialsSettings() {
             <Input
               value={templateID}
               onChange={(e) => setTemplateID(e.target.value)}
-              placeholder="4acper6ej3qpzitdqf1e"
+              placeholder="usrrhp4zsns5yyithi8a"
             />
           </div>
 

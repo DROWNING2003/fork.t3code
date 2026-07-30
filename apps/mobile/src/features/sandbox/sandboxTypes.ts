@@ -28,7 +28,7 @@ export interface SandboxCredentials {
   templateID: string;
 }
 
-export const DEFAULT_TEMPLATE_ID = "4acper6ej3qpzitdqf1e";
+export const DEFAULT_TEMPLATE_ID = "usrrhp4zsns5yyithi8a";
 export const DEFAULT_OPENAI_BASE_URL = "https://api.fenno.ai";
 export const DEFAULT_TIMEOUT_HOURS = 3;
 export const DEFAULT_T3_PORT = 8080;
