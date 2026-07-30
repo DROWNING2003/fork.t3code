@@ -4,6 +4,7 @@ import { EnvironmentId, ProjectId } from "@t3tools/contracts";
 import {
   buildSandboxProjectCreateInput,
   findSandboxProject,
+  findConnectedSandboxMissingProject,
   SANDBOX_PROJECT_WORKSPACE_ROOT,
 } from "./sandboxProject";
 
@@ -33,5 +34,35 @@ describe("sandbox projects", () => {
       createWorkspaceRootIfMissing: true,
       defaultModelSelection: null,
     });
+  });
+
+  it("waits for a connected sandbox before creating its project", () => {
+    const environmentId = EnvironmentId.make("sandbox-environment");
+
+    expect(
+      findConnectedSandboxMissingProject(
+        [
+          {
+            environmentId,
+            displayUrl: "https://8080-sandboxid.e2b.eirture.cn",
+            connection: { phase: "connecting" },
+          },
+        ],
+        [],
+      ),
+    ).toBeNull();
+
+    expect(
+      findConnectedSandboxMissingProject(
+        [
+          {
+            environmentId,
+            displayUrl: "https://8080-sandboxid.e2b.eirture.cn",
+            connection: { phase: "connected" },
+          },
+        ],
+        [],
+      )?.environmentId,
+    ).toBe(environmentId);
   });
 });

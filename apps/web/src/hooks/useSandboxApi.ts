@@ -10,11 +10,7 @@ import { useCallback } from "react";
 import { startSandboxT3Server, getSandboxPairingUrl } from "../lib/sandbox-client";
 import { connectPairing } from "../connection/onboarding";
 import { useAtomCommand } from "../state/use-atom-command";
-import { projectEnvironment } from "../state/projects";
-import { useProjects } from "../state/entities";
 import { getAdditionalInjections } from "../lib/sandboxCredentialStore";
-import { newProjectId } from "../lib/utils";
-import { buildSandboxProjectCreateInput, findSandboxProject } from "../sandboxProject";
 
 export function useSandboxApi(credentials: SandboxCredentials) {
   const api = createSandboxApi({
@@ -22,8 +18,6 @@ export function useSandboxApi(credentials: SandboxCredentials) {
     apiUrl: credentials.e2bApiUrl,
   });
   const connectPairingEnv = useAtomCommand(connectPairing, { reportFailure: false });
-  const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
-  const projects = useProjects();
 
   const connect = useCallback(
     async (sandbox: SandboxInfo): Promise<EnvironmentId> => {
@@ -71,19 +65,9 @@ export function useSandboxApi(credentials: SandboxCredentials) {
       if (result._tag !== "Success") {
         throw new Error("Failed to connect to sandbox");
       }
-      const environmentId = result.value as EnvironmentId;
-      if (findSandboxProject(projects, environmentId) === null) {
-        const createResult = await createProject({
-          environmentId,
-          input: buildSandboxProjectCreateInput(newProjectId()),
-        });
-        if (createResult._tag !== "Success") {
-          throw new Error("Failed to create a project for the sandbox");
-        }
-      }
-      return environmentId;
+      return result.value as EnvironmentId;
     },
-    [api, connectPairingEnv, createProject, credentials, projects],
+    [api, connectPairingEnv, credentials],
   );
 
   return { api, connect };

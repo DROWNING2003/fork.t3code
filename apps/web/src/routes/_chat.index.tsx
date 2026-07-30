@@ -10,12 +10,19 @@ import { Button } from "../components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "../components/ui/empty";
 import { SidebarInset } from "../components/ui/sidebar";
 import { useNewThreadHandler } from "../hooks/useHandleNewThread";
+import { newProjectId } from "../lib/utils";
+import {
+  buildSandboxProjectCreateInput,
+  findConnectedSandboxMissingProject,
+} from "../sandboxProject";
 import {
   useAllEnvironmentShellsBootstrapped,
   useProjects,
   useThreadShells,
 } from "../state/entities";
 import { useEnvironments } from "../state/environments";
+import { projectEnvironment } from "../state/projects";
+import { useAtomCommand } from "../state/use-atom-command";
 import { APP_DISPLAY_NAME } from "~/branding";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { cn } from "~/lib/utils";
@@ -57,7 +64,9 @@ function IndexDraftLanding() {
   const { environments } = useEnvironments();
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
   const handleNewThread = useNewThreadHandler();
+  const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
   const startingRef = useRef(false);
+  const creatingSandboxProjectsRef = useRef(new Set<string>());
   const [startState, setStartState] = useState({ failed: false, retryRequest: 0 });
   const sandboxEnvironmentIds = useMemo(
     () =>
@@ -90,6 +99,21 @@ function IndexDraftLanding() {
         : null,
     [bootstrapped, projects, threads],
   );
+
+  useEffect(() => {
+    if (!isSandboxOnlyWeb) return;
+    const environment = findConnectedSandboxMissingProject(environments, allProjects);
+    if (environment === null || creatingSandboxProjectsRef.current.has(environment.environmentId)) {
+      return;
+    }
+    creatingSandboxProjectsRef.current.add(environment.environmentId);
+    void createProject({
+      environmentId: environment.environmentId,
+      input: buildSandboxProjectCreateInput(newProjectId()),
+    }).finally(() => {
+      creatingSandboxProjectsRef.current.delete(environment.environmentId);
+    });
+  }, [allProjects, createProject, environments]);
 
   useEffect(() => {
     if (mostRecentProject === null || startingRef.current) {
