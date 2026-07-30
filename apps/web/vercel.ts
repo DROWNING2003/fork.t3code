@@ -1,6 +1,7 @@
 import { matchers, routes, type Transform, type VercelConfig } from "@vercel/config/v1";
 
 const ROUTER_HOST = "app.t3.codes";
+const sandboxOnlyDeployment = process.env.VITE_BOUNDLY_WEB_SURFACE === "sandbox";
 const HOSTED_WEB_CHANNEL_COOKIE = "t3code_web_channel";
 const LATEST_ORIGIN = "https://latest.app.t3.codes";
 const NIGHTLY_ORIGIN = "https://nightly.app.t3.codes";
@@ -27,7 +28,7 @@ export const config: VercelConfig = {
   buildCommand:
     'vp run --filter @t3tools/web build && node ../../scripts/apply-web-brand-assets.ts --channel "${VITE_HOSTED_APP_CHANNEL:-latest}"',
   git: {
-    deploymentEnabled: false,
+    deploymentEnabled: sandboxOnlyDeployment,
   },
   installCommand:
     "npm install -g vite-plus && vp install --ignore-scripts --filter '@t3tools/scripts...' --filter '@t3tools/web...'",
