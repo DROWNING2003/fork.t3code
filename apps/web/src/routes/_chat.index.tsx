@@ -1,5 +1,6 @@
 import { scopeProjectRef } from "@t3tools/client-runtime/environment";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { isSandboxUrl } from "@t3tools/shared/sandbox";
 import { LinkIcon, PlusIcon, RotateCcwIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -18,11 +19,22 @@ import { useEnvironments } from "../state/environments";
 import { APP_DISPLAY_NAME } from "~/branding";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { cn } from "~/lib/utils";
+import { shouldRedirectSandboxWebChatIndex } from "~/sandboxWebRouting";
+import { isSandboxOnlyWeb } from "~/webSurface";
 import { COLLAPSED_SIDEBAR_TITLEBAR_INSET_CLASS } from "~/workspaceTitlebar";
 
 function ChatIndexRouteView() {
   const { authGateState } = Route.useRouteContext();
-  const { environments } = useEnvironments();
+  const { environments, isReady } = useEnvironments();
+
+  if (isSandboxOnlyWeb) {
+    const sandboxCount = environments.filter(
+      (environment) => environment.displayUrl && isSandboxUrl(environment.displayUrl),
+    ).length;
+    if (shouldRedirectSandboxWebChatIndex({ catalogReady: isReady, sandboxCount })) {
+      return <Navigate to="/sandboxes" replace />;
+    }
+  }
 
   if (authGateState.status === "hosted-static" && environments.length === 0) {
     return <HostedStaticOnboardingState />;
