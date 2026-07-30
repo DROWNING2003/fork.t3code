@@ -5,17 +5,12 @@ import {
   createSandboxApi,
   detectCodexProviders,
   DEFAULT_SANDBOX_SKILLS,
-  ENVD_PORT,
-  sandboxUrl,
-  envdHeaders,
 } from "@t3tools/sandbox-client";
 import { useCallback } from "react";
-import { uploadT3Bundle, startSandboxT3Server, getSandboxPairingUrl } from "../lib/sandbox-client";
+import { startSandboxT3Server, getSandboxPairingUrl } from "../lib/sandbox-client";
 import { connectPairing } from "../connection/onboarding";
 import { useAtomCommand } from "../state/use-atom-command";
 import { getAdditionalInjections } from "../lib/sandboxCredentialStore";
-
-const TEMPLATE_SERVER_DIR = "/home/user/t3-server";
 
 export function useSandboxApi(credentials: SandboxCredentials) {
   const api = createSandboxApi({
@@ -26,23 +21,6 @@ export function useSandboxApi(credentials: SandboxCredentials) {
 
   const connect = useCallback(
     async (sandbox: SandboxInfo): Promise<EnvironmentId> => {
-      const resolvedDomain = sandbox.domain ?? credentials.sandboxDomain ?? "";
-      const envdBase = sandboxUrl(sandbox.sandboxID, resolvedDomain, undefined, ENVD_PORT);
-      const headers = envdHeaders({
-        sandboxID: sandbox.sandboxID,
-        ...(sandbox.envdAccessToken !== undefined
-          ? { envdAccessToken: sandbox.envdAccessToken }
-          : {}),
-        ...(sandbox.trafficAccessToken !== undefined
-          ? { trafficAccessToken: sandbox.trafficAccessToken }
-          : {}),
-      });
-      let distDir: string | null = null;
-      if (envdBase) {
-        distDir = await uploadT3Bundle(envdBase, headers);
-      }
-
-      const serverDistDir = distDir ?? TEMPLATE_SERVER_DIR;
       const additional = getAdditionalInjections();
       const allInjections = [
         ...additional,
@@ -81,7 +59,6 @@ export function useSandboxApi(credentials: SandboxCredentials) {
         sandbox.domain,
         credentials.sandboxDomain,
         sandbox as Pick<SandboxInfo, "envdAccessToken" | "trafficAccessToken">,
-        serverDistDir,
       );
 
       const result = await connectPairingEnv({ pairingUrl });
