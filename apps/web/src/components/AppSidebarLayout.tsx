@@ -15,8 +15,6 @@ import { resolveShortcutCommand, shortcutLabelForCommand } from "../keybindings"
 import { cn, isMacPlatform } from "../lib/utils";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { useEnvironmentIdentificationMode, useSidebarV2Enabled } from "../hooks/useSettings";
-import { isSandboxOnlyWeb } from "../webSurface";
-import { SandboxOnlySidebar } from "./SandboxOnlySidebar";
 import ThreadSidebar from "./Sidebar";
 import ThreadSidebarV2 from "./SidebarV2";
 import { useSidebarStageBackdropVariant } from "./SidebarStageBackdrop";
@@ -202,13 +200,7 @@ export function AppSidebarLayout({ children }: { children: ReactNode }) {
           onResize: setSidebarWidth,
         }}
       >
-        {isSandboxOnlyWeb ? (
-          <SandboxOnlySidebar />
-        ) : useSidebarV2 ? (
-          <ThreadSidebarV2 />
-        ) : (
-          <ThreadSidebar />
-        )}
+        {useSidebarV2 ? <ThreadSidebarV2 /> : <ThreadSidebar />}
         <SidebarRail />
       </Sidebar>
       {children}

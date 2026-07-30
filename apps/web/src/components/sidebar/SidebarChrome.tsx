@@ -4,6 +4,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { cn } from "../../lib/utils";
+import { isSandboxOnlyWeb } from "../../webSurface";
 import {
   resolveEnvironmentIdentificationPillLabel,
   resolveSidebarStageBackdropVariant,
@@ -95,7 +96,7 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   const navigate = useNavigate();
   const { isMobile, setOpenMobile } = useSidebar();
   const handleNav = useCallback(
-    (to: "/settings" | "/sandboxes") => {
+    (to: "/settings" | "/settings/sandbox" | "/sandboxes") => {
       if (isMobile) {
         setOpenMobile(false);
       }
@@ -112,13 +113,15 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
         <SidebarMenuItem>
           <SidebarMenuButton onClick={() => handleNav("/sandboxes")}>
             <CloudIcon />
-            <span>Sandbox</span>
+            <span>{isSandboxOnlyWeb ? "沙箱" : "Sandbox"}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <SidebarMenuButton onClick={() => handleNav("/settings")}>
+          <SidebarMenuButton
+            onClick={() => handleNav(isSandboxOnlyWeb ? "/settings/sandbox" : "/settings")}
+          >
             <SettingsIcon />
-            <span>Settings</span>
+            <span>{isSandboxOnlyWeb ? "沙箱凭证" : "Settings"}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>

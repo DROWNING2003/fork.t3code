@@ -23,6 +23,7 @@ import {
   useSidebar,
 } from "../ui/sidebar";
 import { T3ConnectSidebarAvatar, T3ConnectSidebarSignIn } from "../clerk/T3ConnectSidebarSignIn";
+import { isSandboxOnlyWeb } from "../../webSurface";
 
 export type SettingsSectionPath =
   | "/settings/general"
@@ -34,6 +35,8 @@ export type SettingsSectionPath =
   | "/settings/sandbox"
   | "/settings/beta"
   | "/settings/archived";
+
+type SettingsNavigationPath = SettingsSectionPath | "/sandboxes";
 
 export const SETTINGS_NAV_ITEMS: ReadonlyArray<{
   label: string;
@@ -56,7 +59,7 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
   const canGoBack = useCanGoBack();
   const { isMobile, setOpenMobile } = useSidebar();
   const handleSectionClick = useCallback(
-    (to: SettingsSectionPath) => {
+    (to: SettingsNavigationPath) => {
       if (isMobile) {
         setOpenMobile(false);
       }
@@ -74,13 +77,19 @@ export function SettingsSidebarNav({ pathname }: { pathname: string }) {
     }
     void navigate({ to: "/" });
   }, [canGoBack, isMobile, navigate, setOpenMobile]);
+  const navigationItems = isSandboxOnlyWeb
+    ? [
+        { label: "沙箱", to: "/sandboxes" as const, icon: CloudIcon },
+        { label: "沙箱凭证", to: "/settings/sandbox" as const, icon: Settings2Icon },
+      ]
+    : SETTINGS_NAV_ITEMS;
 
   return (
     <>
       <SidebarContent className="overflow-x-hidden">
         <SidebarGroup className="p-2">
           <SidebarMenu>
-            {SETTINGS_NAV_ITEMS.map((item) => {
+            {navigationItems.map((item) => {
               const Icon = item.icon;
               const isActive = pathname === item.to;
               return (
