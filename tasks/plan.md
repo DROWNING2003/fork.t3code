@@ -16,7 +16,7 @@ Create a separate public Boundly web deployment that reuses `apps/web` but expos
 
 - Unit tests: `vp test run <target test files>`
 - Typecheck: `vp run --filter @t3tools/web typecheck`
-- Build: `vp run --filter @t3tools/web build`
+- Sandbox build: `VITE_BOUNDLY_WEB_SURFACE=sandbox vp run --filter @t3tools/web build`
 
 ## Success Criteria
 

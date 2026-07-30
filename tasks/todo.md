@@ -8,7 +8,7 @@
 - [x] The Vite build exposes this mode without changing existing URL configuration behavior.
 - [x] Default and Electron builds remain on the full surface.
 
-**Verification:** `vp test run apps/web/src/webSurface.test.ts` and `vp --filter @t3tools/web typecheck`
+**Verification:** `vp test run apps/web/src/webSurface.test.ts` and `vp run --filter @t3tools/web typecheck`
 
 **Dependencies:** None
 
@@ -16,9 +16,9 @@
 
 **Acceptance criteria:**
 
-- [ ] Sandbox-mode root bypasses primary local-server authentication and starts at `/sandboxes`.
-- [ ] The full shell remains unchanged when the mode is absent.
-- [ ] Route behavior is covered by focused tests.
+- [x] Sandbox-mode root bypasses primary local-server authentication and starts at `/sandboxes`.
+- [x] The full shell remains unchanged when the mode is absent.
+- [x] Route behavior is covered by focused tests.
 
 **Verification:** focused Web route/root tests and Web typecheck
 
@@ -28,9 +28,9 @@
 
 **Acceptance criteria:**
 
-- [ ] Public mode presents sandbox credentials and sandbox lifecycle actions only.
-- [ ] Local, generic remote, relay/Connect, and general settings paths redirect to `/sandboxes`.
-- [ ] Only sandbox-backed environments are visible to public chat navigation.
+- [x] Public mode presents sandbox credentials and sandbox lifecycle actions only.
+- [x] Local, generic remote, relay/Connect, and general settings paths redirect to `/sandboxes`.
+- [x] Only sandbox-backed environments are visible to public chat navigation.
 
 **Verification:** focused mode, routing, and environment-filter tests
 
@@ -40,8 +40,8 @@
 
 **Acceptance criteria:**
 
-- [ ] Create and Connect continue to start T3 Server in the sandbox and enter its chat workspace.
-- [ ] Non-sandbox environment URLs are rejected in public mode.
+- [x] Create and Connect continue to start T3 Server in the sandbox and enter its chat workspace.
+- [x] Non-sandbox environment URLs are rejected in public mode.
 - [ ] Existing desktop/local behavior remains covered.
 
 **Verification:** sandbox hook tests, Web typecheck, and an integrated Web pass after user approval for browser use
