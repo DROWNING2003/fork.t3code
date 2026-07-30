@@ -1,18 +1,37 @@
 import type { SandboxInfo } from "@t3tools/shared/sandbox";
-import { CloudOffIcon, ExternalLinkIcon, RefreshCwIcon, Trash2Icon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { formatRelativeTimeLabel } from "../../timestampFormat";
+import {
+  ExternalLinkIcon,
+  LoaderCircleIcon,
+  PauseIcon,
+  PlayIcon,
+  RefreshCwIcon,
+  Trash2Icon,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+
 import { Button } from "../ui/button";
+import { Card, CardHeader, CardTitle, CardPanel, CardFooter } from "../ui/card";
 
 interface Props {
   readonly sandbox: SandboxInfo;
   readonly fallbackDomain?: string;
+  readonly isConnecting: boolean;
   readonly onConnect: () => void;
+  readonly onPause: () => void;
+  readonly onResume: () => void;
   readonly onRefresh: () => void;
   readonly onDelete: () => void;
 }
 
-export function SandboxCard({ sandbox, onConnect, onRefresh, onDelete }: Props) {
+export function SandboxCard({
+  sandbox,
+  isConnecting,
+  onConnect,
+  onPause,
+  onResume,
+  onRefresh,
+  onDelete,
+}: Props) {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -22,47 +41,78 @@ export function SandboxCard({ sandbox, onConnect, onRefresh, onDelete }: Props) 
 
   const msLeft = new Date(sandbox.endAt).getTime() - now;
   const minutesLeft = Math.max(0, Math.floor(msLeft / 60_000));
-  const isExpiring = minutesLeft < 30;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            {sandbox.alias || sandbox.sandboxID.slice(0, 8)}
-          </span>
-          <span className="text-xs text-muted-foreground">{sandbox.sandboxID.slice(0, 12)}</span>
-        </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{sandbox.alias || sandbox.sandboxID.slice(0, 8)}</CardTitle>
         <span
-          className={`text-xs font-medium ${isExpiring ? "text-amber-500" : "text-muted-foreground"}`}
+          className={`text-xs font-medium ${minutesLeft < 30 ? "text-amber-500" : "text-muted-foreground"}`}
         >
-          {minutesLeft > 0 ? `${minutesLeft}m left` : "Expired"}
+          {msLeft > 0 ? `${minutesLeft}m remaining` : "Expired"}
         </span>
-      </div>
-
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <CloudOffIcon className="size-3" />
-        <span>{sandbox.state}</span>
-        {sandbox.domain && (
-          <>
-            <ExternalLinkIcon className="size-3" />
-            <span className="truncate">{sandbox.domain}</span>
-          </>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button size="sm" onClick={onConnect} disabled={sandbox.state !== "running"}>
-          连接
-        </Button>
-        <Button size="sm" variant="outline" onClick={onRefresh}>
-          <RefreshCwIcon className="size-3" />
-          刷新
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDelete} className="text-destructive">
-          <Trash2Icon className="size-3" />
-        </Button>
-      </div>
-    </div>
+      </CardHeader>
+      <CardPanel>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span
+            className={`capitalize font-medium ${sandbox.state === "paused" ? "text-amber-500" : ""}`}
+          >
+            {sandbox.state}
+          </span>
+          <span className="font-mono">{sandbox.sandboxID.slice(0, 12)}</span>
+          {sandbox.domain && (
+            <>
+              <ExternalLinkIcon className="size-3 shrink-0" />
+              <span className="truncate">{sandbox.domain}</span>
+            </>
+          )}
+        </div>
+      </CardPanel>
+      <CardFooter>
+        <div className="flex flex-wrap items-center gap-2">
+          {sandbox.state === "running" ? (
+            <>
+              <Button size="xs" onClick={onConnect} disabled={isConnecting}>
+                {isConnecting && <LoaderCircleIcon className="size-3 animate-spin" />}
+                {isConnecting ? "连接中" : "连接"}
+              </Button>
+              <Button
+                size="icon-xs"
+                variant="outline"
+                onClick={onPause}
+                aria-label="暂停"
+                title="暂停"
+              >
+                <PauseIcon className="size-3" />
+              </Button>
+            </>
+          ) : (
+            <Button size="xs" onClick={onResume}>
+              <PlayIcon className="size-3" />
+              恢复
+            </Button>
+          )}
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={onRefresh}
+            aria-label="刷新"
+            title="刷新"
+          >
+            <RefreshCwIcon className="size-3" />
+          </Button>
+          <Button
+            size="icon-xs"
+            variant="outline"
+            onClick={onDelete}
+            className="text-destructive-foreground"
+            aria-label="删除"
+            title="删除"
+          >
+            <Trash2Icon className="size-3" />
+          </Button>
+        </div>
+      </CardFooter>
+    </Card>
   );
 }

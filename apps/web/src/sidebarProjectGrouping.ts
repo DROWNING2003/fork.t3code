@@ -26,6 +26,8 @@ export interface SidebarProjectSnapshot extends Project {
   // "lives on a real remote" so the project header can pick a
   // container icon instead of the generic cloud icon.
   allRemoteMembersAreDesktopLocal: boolean;
+  allRemoteMembersAreSandbox: boolean;
+  allRemoteMembersAreConnectedSandbox: boolean;
   memberProjects: readonly SidebarProjectGroupMember[];
   memberProjectRefs: readonly ScopedProjectRef[];
   remoteEnvironmentLabels: readonly string[];
@@ -122,6 +124,8 @@ export function buildSidebarProjectSnapshots(input: {
   // env" so callers that don't care about the distinction get the
   // legacy behavior.
   isDesktopLocalEnvironment?: (environmentId: EnvironmentId) => boolean;
+  isSandboxEnvironment?: (environmentId: EnvironmentId) => boolean;
+  isConnectedSandboxEnvironment?: (environmentId: EnvironmentId) => boolean;
 }): SidebarProjectSnapshot[] {
   const winnersByPhysicalKey = collectProjectWinnersByPhysicalKey(input);
   const groupedMembers = new Map<string, SidebarProjectGroupMember[]>();
@@ -195,6 +199,12 @@ export function buildSidebarProjectSnapshots(input: {
     const allRemoteMembersAreDesktopLocal =
       remoteMembers.length > 0 &&
       remoteMembers.every((member) => isDesktopLocal(member.environmentId));
+    const isSandbox = input.isSandboxEnvironment ?? (() => false);
+    const allRemoteMembersAreSandbox =
+      remoteMembers.length > 0 && remoteMembers.every((member) => isSandbox(member.environmentId));
+    const isConnected = input.isConnectedSandboxEnvironment ?? (() => false);
+    const allRemoteMembersAreConnectedSandbox =
+      remoteMembers.length > 0 && remoteMembers.some((member) => isConnected(member.environmentId));
 
     result.push({
       ...representative,
@@ -210,6 +220,8 @@ export function buildSidebarProjectSnapshots(input: {
       environmentPresence:
         hasLocal && hasRemote ? "mixed" : hasRemote ? "remote-only" : "local-only",
       allRemoteMembersAreDesktopLocal,
+      allRemoteMembersAreSandbox,
+      allRemoteMembersAreConnectedSandbox,
       memberProjects: members,
       memberProjectRefs: projectRefsByLogicalKey.get(logicalKey) ?? [],
       remoteEnvironmentLabels,

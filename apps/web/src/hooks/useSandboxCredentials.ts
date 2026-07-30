@@ -1,17 +1,16 @@
-import type { SandboxCredentials } from "@t3tools/contracts/sandbox";
+import type { SandboxCredentials } from "@t3tools/sandbox-client";
 import {
   DEFAULT_OPENAI_BASE_URL,
   DEFAULT_SANDBOX_API_URL,
-  DEFAULT_SANDBOX_DOMAIN,
   DEFAULT_TEMPLATE_ID,
-} from "@t3tools/shared/sandbox";
+} from "@t3tools/sandbox-client";
 import { useCallback, useEffect, useState } from "react";
 import { sandboxCredentialStore } from "../lib/sandboxCredentialStore";
 
 export const DEFAULT_CREDENTIALS: SandboxCredentials = {
   e2bApiKey: "",
   e2bApiUrl: DEFAULT_SANDBOX_API_URL,
-  sandboxDomain: DEFAULT_SANDBOX_DOMAIN,
+  sandboxDomain: "",
   openaiApiKey: "",
   openaiBaseUrl: DEFAULT_OPENAI_BASE_URL,
   templateID: DEFAULT_TEMPLATE_ID,
@@ -33,14 +32,10 @@ export function useSandboxCredentials(): UseSandboxCredentialsResult {
     sandboxCredentialStore
       .get()
       .then((saved) => {
-        if (saved) {
-          setCredentials({ ...DEFAULT_CREDENTIALS, ...saved });
-        }
+        if (saved) setCredentials({ ...DEFAULT_CREDENTIALS, ...saved });
         setIsLoaded(true);
       })
-      .catch(() => {
-        setIsLoaded(true);
-      });
+      .catch(() => setIsLoaded(true));
   }, []);
 
   const save = useCallback(async (creds: SandboxCredentials) => {
@@ -56,7 +51,7 @@ export function useSandboxCredentials(): UseSandboxCredentialsResult {
   return {
     credentials,
     isLoaded,
-    hasRequired: !!(credentials.e2bApiKey && credentials.openaiApiKey),
+    hasRequired: !!credentials.e2bApiKey,
     save,
     clear,
   };

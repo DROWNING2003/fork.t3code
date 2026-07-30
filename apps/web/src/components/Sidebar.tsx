@@ -6,6 +6,7 @@ import {
   ContainerIcon,
   FolderPlusIcon,
   Globe2Icon,
+  HardDriveIcon,
   LoaderIcon,
   SearchIcon,
   SquarePenIcon,
@@ -71,6 +72,7 @@ import {
   type SidebarThreadSortOrder,
 } from "@t3tools/contracts/settings";
 import { isDesktopLocalConnectionTarget } from "../connection/desktopLocal";
+import { isSandboxUrl } from "@t3tools/shared/sandbox";
 import { useDesktopLocalBootstraps } from "../connection/useDesktopLocalBootstraps";
 import { isElectron } from "../env";
 import { useOpenPrLink } from "../lib/openPullRequestLink";
@@ -2279,7 +2281,11 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
                   aria-label={
                     project.allRemoteMembersAreDesktopLocal
                       ? "Local sandbox project"
-                      : "Remote project"
+                      : project.allRemoteMembersAreSandbox
+                        ? project.allRemoteMembersAreConnectedSandbox
+                          ? "Cloud sandbox project (running)"
+                          : "Cloud sandbox project (paused)"
+                        : "Remote project"
                   }
                   className="pointer-events-none absolute top-1 right-1.5 inline-flex size-5 items-center justify-center rounded-md text-muted-foreground/60 transition-opacity duration-150 max-sm:right-7 group-hover/project-header:opacity-0 group-focus-within/project-header:opacity-0 max-sm:group-hover/project-header:opacity-100 max-sm:group-focus-within/project-header:opacity-100"
                 />
@@ -2287,6 +2293,14 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
             >
               {project.allRemoteMembersAreDesktopLocal ? (
                 <ContainerIcon className="size-3" />
+              ) : project.allRemoteMembersAreSandbox ? (
+                <HardDriveIcon
+                  className={
+                    project.allRemoteMembersAreConnectedSandbox
+                      ? "size-3 text-green-500/80"
+                      : "size-3 text-amber-500/80"
+                  }
+                />
               ) : (
                 <CloudIcon className="size-3" />
               )}
@@ -2294,7 +2308,11 @@ const SidebarProjectItem = memo(function SidebarProjectItem(props: SidebarProjec
             <TooltipPopup side="top">
               {project.allRemoteMembersAreDesktopLocal
                 ? `Local sandbox: ${project.remoteEnvironmentLabels.join(", ")}`
-                : `Remote environment: ${project.remoteEnvironmentLabels.join(", ")}`}
+                : project.allRemoteMembersAreSandbox
+                  ? project.allRemoteMembersAreConnectedSandbox
+                    ? `Sandbox (running): ${project.remoteEnvironmentLabels.join(", ")}`
+                    : `Sandbox (paused): ${project.remoteEnvironmentLabels.join(", ")}`
+                  : `Remote environment: ${project.remoteEnvironmentLabels.join(", ")}`}
             </TooltipPopup>
           </Tooltip>
         )}
@@ -3055,6 +3073,29 @@ export default function Sidebar() {
       ),
     [environments],
   );
+  const sandboxEnvironmentIds = useMemo(
+    () =>
+      new Set(
+        environments
+          .filter((environment) => environment.displayUrl && isSandboxUrl(environment.displayUrl))
+          .map((environment) => environment.environmentId),
+      ),
+    [environments],
+  );
+  const connectedSandboxIds = useMemo(
+    () =>
+      new Set(
+        environments
+          .filter(
+            (environment) =>
+              environment.displayUrl &&
+              isSandboxUrl(environment.displayUrl) &&
+              environment.connection.phase === "connected",
+          )
+          .map((environment) => environment.environmentId),
+      ),
+    [environments],
+  );
   const orderedProjects = useMemo(() => {
     return orderItemsByPreferredIds({
       items: projects,
@@ -3095,10 +3136,13 @@ export default function Sidebar() {
       primaryEnvironmentId,
       resolveEnvironmentLabel: (environmentId) => environmentLabelById.get(environmentId) ?? null,
       isDesktopLocalEnvironment: (environmentId) => desktopLocalEnvironmentIds.has(environmentId),
+      isSandboxEnvironment: (environmentId) => sandboxEnvironmentIds.has(environmentId),
+      isConnectedSandboxEnvironment: (environmentId) => connectedSandboxIds.has(environmentId),
     });
   }, [
     environmentLabelById,
     desktopLocalEnvironmentIds,
+    sandboxEnvironmentIds,
     orderedProjects,
     projectGroupingSettings,
     primaryEnvironmentId,

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
   DEFAULT_SANDBOX_API_URL,
+  SANDBOX_T3_SERVER_COMMAND,
   buildSandboxCreateBody,
   createT3PairingRequest,
   createT3StartRequest,
@@ -12,7 +13,7 @@ import {
   startT3Server,
   waitForT3Server,
 } from "./useSandboxApi";
-import { sandboxUrl } from "./sandboxTypes";
+import { isSandboxConnecting, sandboxUrl } from "./sandboxTypes";
 
 function decodeConnectJsonEnvelope(body: ArrayBuffer) {
   const length = new DataView(body).getUint32(1);
@@ -20,6 +21,18 @@ function decodeConnectJsonEnvelope(body: ArrayBuffer) {
 }
 
 describe("resolveSandboxApiUrl", () => {
+  it("starts the T3 Server already installed in the sandbox template", () => {
+    expect(SANDBOX_T3_SERVER_COMMAND).toContain(
+      "node /home/user/t3-server/bin.mjs serve --port 8080",
+    );
+  });
+
+  it("marks only the selected sandbox as connecting", () => {
+    expect(isSandboxConnecting("sandbox-a", "sandbox-a")).toBe(true);
+    expect(isSandboxConnecting("sandbox-b", "sandbox-a")).toBe(false);
+    expect(isSandboxConnecting("sandbox-a", null)).toBe(false);
+  });
+
   it("passes placeholder OpenAI environment variables so Codex can discover models", () => {
     expect(
       buildSandboxCreateBody({
@@ -75,7 +88,14 @@ describe("resolveSandboxApiUrl", () => {
 
   it("encodes an idempotent T3 launch as a Connect JSON envelope", () => {
     const body = decodeConnectJsonEnvelope(
-      createT3StartRequest({ openAiBaseUrl: "https://api.fenno.ai" }),
+      createT3StartRequest([
+        {
+          name: "OpenAI",
+          baseUrl: "https://api.fenno.ai",
+          envVar: "OPENAI_API_KEY",
+          configKey: "requires_openai_auth",
+        },
+      ]),
     );
 
     expect(body.process.cmd).toBe("/bin/bash");
@@ -86,9 +106,7 @@ describe("resolveSandboxApiUrl", () => {
     expect(body.process.args[1]).toContain(
       "node /home/user/t3-server/bin.mjs serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web",
     );
-    expect(body.process.args[1]).toContain(
-      "pgrep -f '^node /home/user/t3-server/bin.mjs serve --port 8080'",
-    );
+    expect(body.process.args[1]).toContain("pgrep -f '^node .*bin\\.mjs serve --port 8080'");
     expect(body.process.args[1]).toContain(
       'while kill -0 "$RUNNING_PID" 2>/dev/null && [ "$WAIT_ATTEMPTS" -lt 50 ]; do',
     );
@@ -98,7 +116,7 @@ describe("resolveSandboxApiUrl", () => {
     expect(body.process.args[1]).toContain(
       "export HOME=/home/user T3CODE_HOME=/home/user/.t3 CODEX_HOME=/home/user/.codex",
     );
-    expect(body.process.args[1]).toContain('{"OPENAI_API_KEY":"sandbox-injection-placeholder"}');
+    expect(body.process.args[1]).toContain('{"OPENAI_API_KEY":"sk-sandbox-injection-placeholder"}');
     expect(body.process.args[1]).toContain("chmod 600 /home/user/.codex/auth.json");
     expect(body.process.args[1]).toContain('model_provider = "OpenAI"');
     expect(body.process.args[1]).toContain('model = "gpt-5.4"');
@@ -108,8 +126,10 @@ describe("resolveSandboxApiUrl", () => {
     expect(body.process.args[1]).toContain('base_url = "https://api.fenno.ai"');
     expect(body.process.args[1]).toContain('wire_api = "responses"');
     expect(body.process.args[1]).toContain("requires_openai_auth = true");
-    expect(body.process.args[1]).toContain("export OPENAI_API_KEY='sandbox-injection-placeholder'");
-    expect(body.process.args[1]).toContain("export OPENAI_BASE_URL='https://api.fenno.ai'");
+    expect(body.process.args[1]).toContain(
+      'OPENAI_API_KEY="${OPENAI_API_KEY:-sk-sandbox-injection-placeholder}"',
+    );
+    expect(body.process.args[1]).toContain('base_url = "https://api.fenno.ai"');
     expect(body.process.args[1]).toContain("> /home/user/.t3/startup.log 2>&1");
     expect(body.stdin).toBe(false);
   });

@@ -29,6 +29,10 @@ import { environmentServerConfigsAtom } from "../../state/server";
 import { usePendingNewTasks } from "../../state/use-pending-new-tasks";
 import { useWorkspaceState } from "../../state/workspace";
 import { useSavedRemoteConnections } from "../../state/use-remote-environment-registry";
+import { useEnvironments } from "../../state/environments";
+import { environmentCatalog } from "../../connection/catalog";
+import { useAtomCommand } from "../../state/use-atom-command";
+import { isSandboxUrl } from "@t3tools/shared/sandbox";
 import { useHardwareKeyboardCommand } from "../keyboard/hardwareKeyboardCommands";
 import {
   hasCustomHomeListOptions,
@@ -182,6 +186,38 @@ function ThreadNavigationSidebarPane(
   const threads = useThreadShells();
   const { state: catalogState } = useWorkspaceState();
   const { savedConnectionsById } = useSavedRemoteConnections();
+  const { environments: sandboxCleanupEnvs } = useEnvironments();
+  const removeEnv = useAtomCommand(environmentCatalog.remove, "sandbox cleanup");
+  const deadEnvsSince = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const now = Date.now();
+    const prev = deadEnvsSince.current;
+
+    const failing = new Set(
+      sandboxCleanupEnvs
+        .filter(
+          (env) =>
+            (env.connection.phase === "error" || env.connection.phase === "reconnecting") &&
+            env.displayUrl &&
+            isSandboxUrl(env.displayUrl),
+        )
+        .map((env) => env.environmentId),
+    );
+
+    for (const env of sandboxCleanupEnvs) {
+      if (failing.has(env.environmentId) && !prev.has(env.environmentId))
+        prev.set(env.environmentId, now);
+      else if (!failing.has(env.environmentId)) prev.delete(env.environmentId);
+    }
+
+    for (const id of prev.keys()) {
+      if (now - (prev.get(id) ?? 0) > 10_000) {
+        prev.delete(id);
+        void removeEnv(id);
+      }
+    }
+  }, [sandboxCleanupEnvs, removeEnv]);
   const [headerIsOverContent, setHeaderIsOverContent] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const searchBarRef = useRef<SearchBarCommands>(null);
@@ -199,8 +235,38 @@ function ThreadNavigationSidebarPane(
         .map((connection) => ({
           environmentId: connection.environmentId,
           label: connection.environmentLabel,
+          displayUrl: connection.displayUrl ?? "",
         }))
         .sort((left, right) => left.label.localeCompare(right.label)),
+    [savedConnectionsById],
+  );
+  const sandboxEnvironmentIds = useMemo(
+    () =>
+      new Set(
+        environments.filter((env) => isSandboxUrl(env.displayUrl)).map((env) => env.environmentId),
+      ),
+    [environments],
+  );
+  const { environments: envPresentations } = useEnvironments();
+  const connectedSandboxIds = useMemo(
+    () =>
+      new Set(
+        envPresentations
+          .filter(
+            (env) =>
+              env.displayUrl &&
+              isSandboxUrl(env.displayUrl) &&
+              env.connection.phase === "connected",
+          )
+          .map((env) => env.environmentId),
+      ),
+    [envPresentations],
+  );
+  const hasSandboxEnvironment = useMemo(
+    () =>
+      Object.values(savedConnectionsById).some(
+        (conn) => conn.displayUrl && isSandboxUrl(conn.displayUrl),
+      ),
     [savedConnectionsById],
   );
   const availableEnvironmentIds = useMemo(
@@ -830,24 +896,40 @@ function ThreadNavigationSidebarPane(
               </Text>
             </Pressable>
           );
-        case "header":
+        case "header": {
+          const headerEnvId = item.group.representative.environmentId;
+          const isHeaderSandbox = sandboxEnvironmentIds.has(headerEnvId);
+          const isHeaderConnected = connectedSandboxIds.has(headerEnvId);
           return (
-            <ThreadListGroupHeader
-              variant="sidebar"
-              collapsed={item.collapsed}
-              isFirst={item.isFirst}
-              groupKey={item.group.key}
-              onGroupAction={updateGroupDisplay}
-              // Same gating as the compact Home list: aggregated groups have no
-              // single target project, and pending-project groups hold a
-              // placeholder shell rather than a real project.
-              newThreadTarget={item.group.newThreadTarget}
-              onNewThread={props.onNewThreadInProject}
-              project={item.group.representative}
-              threadCount={item.group.threads.length + item.group.pendingTasks.length}
-              title={item.group.title}
-            />
+            <>
+              {isHeaderSandbox && (
+                <View className="flex-row items-center gap-1.5 px-4 pt-2 pb-0.5">
+                  <View
+                    className={`size-1.5 rounded-full ${isHeaderConnected ? "bg-green-500" : "bg-amber-500"}`}
+                  />
+                  <Text className="text-[10px] font-t3-medium text-foreground-muted">
+                    {isHeaderConnected ? "Sandbox" : "Sandbox · Paused"}
+                  </Text>
+                </View>
+              )}
+              <ThreadListGroupHeader
+                variant="sidebar"
+                collapsed={item.collapsed}
+                isFirst={item.isFirst}
+                groupKey={item.group.key}
+                onGroupAction={updateGroupDisplay}
+                // Same gating as the compact Home list: aggregated groups have no
+                // single target project, and pending-project groups hold a
+                // placeholder shell rather than a real project.
+                newThreadTarget={item.group.newThreadTarget}
+                onNewThread={props.onNewThreadInProject}
+                project={item.group.representative}
+                threadCount={item.group.threads.length + item.group.pendingTasks.length}
+                title={item.group.title}
+              />
+            </>
           );
+        }
         case "pending-task":
           return (
             <PendingTaskListRow
@@ -1051,15 +1133,30 @@ function ThreadNavigationSidebarPane(
                 showsVerticalScrollIndicator={false}
                 style={styles.threadList}
                 ListHeaderComponent={
-                  showsConnectionStatus ? (
-                    <View className="px-1.5 pt-0.5 pb-2">
-                      <WorkspaceConnectionStatus
-                        onPress={props.onOpenEnvironmentSettings}
-                        state={catalogState}
-                        variant="sidebar"
-                      />
-                    </View>
-                  ) : null
+                  <>
+                    {showsConnectionStatus ? (
+                      <View className="px-1.5 pt-0.5 pb-2">
+                        <WorkspaceConnectionStatus
+                          onPress={props.onOpenEnvironmentSettings}
+                          state={catalogState}
+                          variant="sidebar"
+                        />
+                      </View>
+                    ) : null}
+                    {hasSandboxEnvironment ? (
+                      <View className="px-1.5 pb-2">
+                        <View className="flex-row items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10">
+                          <SymbolView
+                            name="cloud"
+                            size={11}
+                            tintColor={mutedColor}
+                            type="monochrome"
+                          />
+                          <Text className="text-[11px] text-foreground-muted">Sandbox</Text>
+                        </View>
+                      </View>
+                    ) : null}
+                  </>
                 }
                 ListEmptyComponent={listEmpty}
               />
@@ -1184,12 +1281,20 @@ function ThreadNavigationSidebarPane(
         </View>
 
         {showsConnectionStatus ? (
-          <View className="px-3.5 pt-2.5">
+          <View className="px-1.5 pt-0.5 pb-2">
             <WorkspaceConnectionStatus
               onPress={props.onOpenEnvironmentSettings}
               state={catalogState}
               variant="sidebar"
             />
+          </View>
+        ) : null}
+        {hasSandboxEnvironment ? (
+          <View className="px-1.5 pb-2">
+            <View className="flex-row items-center gap-1 px-2 py-1 rounded-full bg-blue-500/10">
+              <SymbolView name="cloud" size={11} tintColor={mutedColor} type="monochrome" />
+              <Text className="text-[11px] text-foreground-muted">Sandbox</Text>
+            </View>
           </View>
         ) : null}
       </View>

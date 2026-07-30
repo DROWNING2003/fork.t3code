@@ -10,13 +10,16 @@ import { ErrorBanner } from "../../components/ErrorBanner";
 import { ConnectionSheetButton } from "../connection/ConnectionSheetButton";
 import { useSandboxApi } from "./useSandboxApi";
 import { useSandboxCredentials } from "./useSandboxCredentials";
+import { getAdditionalInjections } from "./useSandboxCredentials";
 import { useRemoteConnections } from "../../state/use-remote-environment-registry";
+import { detectCodexProviders, DEFAULT_SANDBOX_SKILLS } from "@t3tools/shared/sandbox";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/unstable/reactivity";
 import {
   DEFAULT_TEMPLATE_ID,
   DEFAULT_OPENAI_BASE_URL,
   DEFAULT_TIMEOUT_HOURS,
+  type SandboxCreateInput,
 } from "./sandboxTypes";
 
 export function SandboxNewSheet() {
@@ -31,6 +34,9 @@ export function SandboxNewSheet() {
 
   const [timeoutHours, setTimeoutHours] = useState(String(DEFAULT_TIMEOUT_HOURS));
   const [githubRepo, setGithubRepo] = useState("");
+  const [githubToken, setGithubToken] = useState("");
+  const [mountPath, setMountPath] = useState("");
+  const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +48,7 @@ export function SandboxNewSheet() {
 
     try {
       const openAiBaseUrl = credentials.openaiBaseUrl || DEFAULT_OPENAI_BASE_URL;
-      const injections = credentials.openaiApiKey
+      const injections: SandboxCreateInput["injections"] = credentials.openaiApiKey
         ? [
             {
               type: "openai" as const,
@@ -51,6 +57,11 @@ export function SandboxNewSheet() {
             },
           ]
         : undefined;
+      const additional = await getAdditionalInjections();
+      const merged: SandboxCreateInput["injections"] =
+        additional.length > 0
+          ? ([...(injections ?? []), ...additional] as SandboxCreateInput["injections"])
+          : injections;
       const envVars = credentials.openaiApiKey
         ? {
             // The real key remains in the platform injection rule. Codex only
@@ -63,9 +74,10 @@ export function SandboxNewSheet() {
       const resources = githubRepo.trim()
         ? [
             {
-              type: "git_repository" as const,
+              type: "github_repository" as const,
               url: `https://github.com/${githubRepo.trim()}`,
-              mount_path: "/home/user/repo",
+              mount_path: mountPath.trim() || "/home/user/repo",
+              authorization_token: githubToken.trim() || "",
             },
           ]
         : undefined;
@@ -73,17 +85,29 @@ export function SandboxNewSheet() {
       const sandbox = await api.createSandbox({
         templateID,
         timeout: hours * 3600,
-        autoPause: false,
+        autoPause: true,
         network: { allowPublicTraffic: true },
         envVars,
-        injections,
+        ...(merged ? { injections: merged } : {}),
+        ...(name.trim() ? { metadata: { name: name.trim() } } : {}),
         resources,
       });
 
       // Wait for T3 Server to boot and get pairing URL
       setError("Waiting for T3 Server to start...");
       const connectedSandbox = await api.connectSandbox(sandbox.sandboxID, hours * 3600);
-      await api.startSandboxT3Server(connectedSandbox, credentials.sandboxDomain, openAiBaseUrl);
+      const providers = detectCodexProviders(
+        (merged ?? []).flatMap((i) => {
+          const url = (i as { base_url?: string }).base_url;
+          return url ? [{ base_url: url }] : [];
+        }),
+      );
+      await api.startSandboxT3Server(
+        connectedSandbox,
+        credentials.sandboxDomain,
+        providers,
+        DEFAULT_SANDBOX_SKILLS,
+      );
       const pairingUrl = await api.getPairingUrl(
         connectedSandbox.sandboxID,
         connectedSandbox.domain ?? sandbox.domain,
@@ -130,6 +154,18 @@ export function SandboxNewSheet() {
           <View collapsable={false} className="gap-4 rounded-[24px] bg-card p-4">
             <View collapsable={false} className="gap-1.5">
               <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                Name
+              </Text>
+              <TextInput
+                placeholder="可选，方便识别沙箱"
+                value={name}
+                onChangeText={setName}
+                className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+              />
+            </View>
+
+            <View collapsable={false} className="gap-1.5">
+              <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
                 Timeout (hours)
               </Text>
               <TextInput
@@ -154,6 +190,38 @@ export function SandboxNewSheet() {
                 className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
               />
             </View>
+
+            {githubRepo.trim() ? (
+              <>
+                <View collapsable={false} className="gap-1.5">
+                  <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                    Mount Path
+                  </Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholder="/home/user/repo"
+                    value={mountPath}
+                    onChangeText={setMountPath}
+                    className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+                  />
+                </View>
+                <View collapsable={false} className="gap-1.5">
+                  <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                    GitHub Token
+                  </Text>
+                  <TextInput
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    secureTextEntry
+                    placeholder="ghp_..."
+                    value={githubToken}
+                    onChangeText={setGithubToken}
+                    className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+                  />
+                </View>
+              </>
+            ) : null}
 
             {error ? <ErrorBanner message={error} /> : null}
 

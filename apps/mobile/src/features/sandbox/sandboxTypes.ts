@@ -12,28 +12,12 @@ export interface SandboxInfo {
   envdVersion?: string;
   envdAccessToken?: string;
   trafficAccessToken?: string | null;
+  metadata?: Record<string, string>;
 }
 
-export interface SandboxCreateInput {
-  templateID: string;
-  timeout: number;
-  autoPause?: boolean;
-  envVars?: Readonly<Record<string, string>>;
-  resources?: ReadonlyArray<{
-    type: "git_repository";
-    url: string;
-    mount_path: string;
-    authorization_token?: string;
-  }>;
-  injections?: ReadonlyArray<{
-    type: "openai";
-    api_key: string;
-    base_url: string;
-  }>;
-  network?: {
-    allowPublicTraffic: boolean;
-  };
-}
+import type { SandboxCreateInput as SDKCreateInput } from "@t3tools/sandbox-client";
+
+export type SandboxCreateInput = SDKCreateInput;
 
 export interface SandboxCredentials {
   e2bApiKey: string;
@@ -48,6 +32,13 @@ export const DEFAULT_TEMPLATE_ID = "4acper6ej3qpzitdqf1e";
 export const DEFAULT_OPENAI_BASE_URL = "https://api.fenno.ai";
 export const DEFAULT_TIMEOUT_HOURS = 3;
 export const DEFAULT_T3_PORT = 8080;
+
+export function isSandboxConnecting(
+  sandboxID: string,
+  connectingSandboxID: string | null,
+): boolean {
+  return sandboxID === connectingSandboxID;
+}
 
 export function sandboxUrl(
   sandboxID: string,

@@ -12,6 +12,7 @@ import { AppText as Text, AppTextInput as TextInput } from "../../components/App
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { ConnectionSheetButton } from "./ConnectionSheetButton";
 import { extractPairingUrlFromQrPayload } from "./pairing";
+import { useSandboxCredentials } from "../sandbox/useSandboxCredentials";
 import { useRemoteConnections } from "../../state/use-remote-environment-registry";
 import { buildPairingUrl, parsePairingUrl } from "./pairing";
 
@@ -28,8 +29,15 @@ export function ConnectionsNewRouteScreen({
     onConnectPress,
     pairingConnectionError,
   } = useRemoteConnections();
+  const { hasRequired } = useSandboxCredentials();
   const navigation = useNavigation();
   const params = route.params ?? {};
+
+  useEffect(() => {
+    if (hasRequired && params.mode !== "manual") {
+      navigation.dispatch(StackActions.replace("Sandboxes" as never));
+    }
+  }, [hasRequired, params.mode, navigation]);
   const insets = useSafeAreaInsets();
   const [hostInput, setHostInput] = useState("");
   const [codeInput, setCodeInput] = useState("");

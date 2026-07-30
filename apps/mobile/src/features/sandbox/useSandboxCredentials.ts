@@ -1,10 +1,8 @@
 import * as SecureStore from "expo-secure-store";
 import { useCallback, useEffect, useState } from "react";
-import {
-  DEFAULT_OPENAI_BASE_URL,
-  DEFAULT_TEMPLATE_ID,
-  type SandboxCredentials,
-} from "./sandboxTypes";
+import type { HttpInjection } from "@t3tools/sandbox-client";
+import { DEFAULT_OPENAI_BASE_URL, DEFAULT_TEMPLATE_ID } from "@t3tools/sandbox-client";
+import type { SandboxCredentials } from "./sandboxTypes";
 
 const KEYS = {
   e2bApiKey: "sandbox_e2b_api_key",
@@ -14,6 +12,25 @@ const KEYS = {
   openaiBaseUrl: "sandbox_openai_base_url",
   templateID: "sandbox_template_id",
 } as const;
+
+const ADDITIONAL_INJECTIONS_KEY = "sandbox_additional_injections";
+
+export function getAdditionalInjections(): Promise<HttpInjection[]> {
+  return SecureStore.getItemAsync(ADDITIONAL_INJECTIONS_KEY).then((raw) => {
+    if (!raw) return [];
+    try {
+      return JSON.parse(raw) as HttpInjection[];
+    } catch {
+      return [];
+    }
+  });
+}
+
+export function setAdditionalInjections(injections: HttpInjection[]): Promise<void> {
+  if (injections.length > 0)
+    return SecureStore.setItemAsync(ADDITIONAL_INJECTIONS_KEY, JSON.stringify(injections));
+  return SecureStore.deleteItemAsync(ADDITIONAL_INJECTIONS_KEY);
+}
 
 export function useSandboxCredentials() {
   const [credentials, setCredentials] = useState<Partial<SandboxCredentials>>({});
@@ -43,32 +60,22 @@ export function useSandboxCredentials() {
   const saveCredentials = useCallback(async (input: Partial<SandboxCredentials>) => {
     const updates: Array<Promise<void>> = [];
     if (input.e2bApiKey !== undefined) {
-      if (input.e2bApiKey) {
-        updates.push(SecureStore.setItemAsync(KEYS.e2bApiKey, input.e2bApiKey));
-      } else {
-        updates.push(SecureStore.deleteItemAsync(KEYS.e2bApiKey));
-      }
+      if (input.e2bApiKey) updates.push(SecureStore.setItemAsync(KEYS.e2bApiKey, input.e2bApiKey));
+      else updates.push(SecureStore.deleteItemAsync(KEYS.e2bApiKey));
     }
     if (input.e2bApiUrl !== undefined) {
-      if (input.e2bApiUrl) {
-        updates.push(SecureStore.setItemAsync(KEYS.e2bApiUrl, input.e2bApiUrl));
-      } else {
-        updates.push(SecureStore.deleteItemAsync(KEYS.e2bApiUrl));
-      }
+      if (input.e2bApiUrl) updates.push(SecureStore.setItemAsync(KEYS.e2bApiUrl, input.e2bApiUrl));
+      else updates.push(SecureStore.deleteItemAsync(KEYS.e2bApiUrl));
     }
     if (input.sandboxDomain !== undefined) {
-      if (input.sandboxDomain) {
+      if (input.sandboxDomain)
         updates.push(SecureStore.setItemAsync(KEYS.sandboxDomain, input.sandboxDomain));
-      } else {
-        updates.push(SecureStore.deleteItemAsync(KEYS.sandboxDomain));
-      }
+      else updates.push(SecureStore.deleteItemAsync(KEYS.sandboxDomain));
     }
     if (input.openaiApiKey !== undefined) {
-      if (input.openaiApiKey) {
+      if (input.openaiApiKey)
         updates.push(SecureStore.setItemAsync(KEYS.openaiApiKey, input.openaiApiKey));
-      } else {
-        updates.push(SecureStore.deleteItemAsync(KEYS.openaiApiKey));
-      }
+      else updates.push(SecureStore.deleteItemAsync(KEYS.openaiApiKey));
     }
     if (input.openaiBaseUrl !== undefined) {
       updates.push(SecureStore.setItemAsync(KEYS.openaiBaseUrl, input.openaiBaseUrl));
@@ -80,7 +87,7 @@ export function useSandboxCredentials() {
     setCredentials((prev) => ({ ...prev, ...input }));
   }, []);
 
-  const hasRequired = loaded && !!credentials.e2bApiKey && !!credentials.openaiApiKey;
+  const hasRequired = loaded && !!credentials.e2bApiKey;
 
   return { credentials, hasRequired, loaded, saveCredentials } as const;
 }

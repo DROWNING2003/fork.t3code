@@ -33,6 +33,8 @@ export function ConnectionSheetButton(props: {
   readonly disabled?: boolean;
   readonly tone?: "primary" | "secondary" | "danger";
   readonly compact?: boolean;
+  readonly grow?: boolean;
+  readonly iconOnly?: boolean;
   readonly onPress: () => void;
 }) {
   const tone = props.tone ?? "secondary";
@@ -63,8 +65,11 @@ export function ConnectionSheetButton(props: {
       accessibilityState={{ disabled: props.disabled ?? false }}
       className={cn(
         props.compact
-          ? "min-h-[42px] flex-row items-center justify-center gap-1.5 rounded-[14px] px-3.5 py-2.5"
+          ? props.iconOnly
+            ? "size-[42px] flex-row items-center justify-center rounded-[14px]"
+            : "min-h-[42px] flex-row items-center justify-center gap-1.5 rounded-[14px] px-3.5 py-2.5"
           : "min-h-[48px] flex-row items-center justify-center gap-2 rounded-[16px] px-4 py-3",
+        props.grow && "flex-1",
         "disabled:opacity-50",
         tone === "primary"
           ? "bg-primary"
@@ -82,18 +87,20 @@ export function ConnectionSheetButton(props: {
         tintColor={textColor}
         type="monochrome"
       />
-      <Text
-        className={cn(
-          "text-xs font-t3-bold tracking-[0.8px] uppercase",
-          tone === "primary"
-            ? "text-primary-foreground"
-            : tone === "danger"
-              ? "text-danger-foreground"
-              : "text-secondary-foreground",
-        )}
-      >
-        {props.label}
-      </Text>
+      {!props.iconOnly && (
+        <Text
+          className={cn(
+            "text-xs font-t3-bold tracking-[0.8px] uppercase",
+            tone === "primary"
+              ? "text-primary-foreground"
+              : tone === "danger"
+                ? "text-danger-foreground"
+                : "text-secondary-foreground",
+          )}
+        >
+          {props.label}
+        </Text>
+      )}
     </Pressable>
   );
 }
