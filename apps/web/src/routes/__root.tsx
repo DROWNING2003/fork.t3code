@@ -4,6 +4,7 @@ import { squashAtomCommandFailure } from "@t3tools/client-runtime/state/runtime"
 import {
   Outlet,
   createRootRoute,
+  redirect,
   type ErrorComponentProps,
   useLocation,
   useNavigate,
@@ -38,6 +39,7 @@ import { syncBrowserChromeTheme } from "../hooks/useTheme";
 import { configureClientTracing } from "../observability/clientTracing";
 import { resolveInitialServerAuthGateState } from "../environments/primary";
 import { hasHostedPairingRequest, isHostedStaticApp } from "../hostedPairing";
+import { resolveSandboxWebRestrictedPathRedirect } from "../sandboxWebRouting";
 import { shellEnvironment } from "../state/shell";
 import { isSandboxOnlyWeb } from "../webSurface";
 import { useAtomValue } from "@effect/atom-react";
@@ -57,6 +59,10 @@ import {
 export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
     if (isSandboxOnlyWeb) {
+      const redirectTo = resolveSandboxWebRestrictedPathRedirect(location.pathname);
+      if (redirectTo) {
+        throw redirect({ to: redirectTo, replace: true });
+      }
       return {
         authGateState: {
           status: "hosted-static",
