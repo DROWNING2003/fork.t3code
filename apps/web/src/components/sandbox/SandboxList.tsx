@@ -19,8 +19,9 @@ import {
   EmptyContent,
   EmptyMedia,
 } from "../ui/empty";
-import { SandboxCard } from "./SandboxCard";
+import { SandboxCard, type SandboxAction } from "./SandboxCard";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
+import { stackedThreadToast, toastManager } from "../ui/toast";
 
 const SANDBOX_ID_REGEX = /^(?:\d+)-([a-z0-9]+)\./i;
 
@@ -50,7 +51,10 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
   const { api, connect } = useSandboxApi(creds.credentials);
   const [sandboxes, setSandboxes] = useState<readonly SandboxInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<{
+    readonly sandboxID: string;
+    readonly action: SandboxAction;
+  } | null>(null);
   const [scope, setScope] = useState<"boundly" | "all">("boundly");
   const catalog = useAtomValue(environmentCatalog.catalogValueAtom);
   const removeEnv = useAtomCommand(environmentCatalog.remove, "sandbox environment remove");
@@ -90,13 +94,17 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
 
   const handleConnect = useCallback(
     async (sandbox: SandboxInfo) => {
-      setConnecting(sandbox.sandboxID);
+      setPendingAction({ sandboxID: sandbox.sandboxID, action: "connect" });
       try {
         const connected = await api.connect(sandbox.sandboxID, 3600);
         await connect(connected as SandboxInfo);
         void navigate({ to: "/" });
       } catch {
-        setConnecting(null);
+        toastManager.add(
+          stackedThreadToast({ type: "error", title: "连接沙箱失败", description: "请重试。" }),
+        );
+      } finally {
+        setPendingAction(null);
       }
     },
     [api, connect],
@@ -116,11 +124,16 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
 
   const handlePause = useCallback(
     async (sandboxID: string) => {
+      setPendingAction({ sandboxID, action: "pause" });
       try {
         await api.pause(sandboxID);
-        void load();
+        await load();
       } catch {
-        /* ignore */
+        toastManager.add(
+          stackedThreadToast({ type: "error", title: "暂停沙箱失败", description: "请重试。" }),
+        );
+      } finally {
+        setPendingAction(null);
       }
     },
     [api, load],
@@ -128,11 +141,16 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
 
   const handleResume = useCallback(
     async (sandboxID: string) => {
+      setPendingAction({ sandboxID, action: "resume" });
       try {
         await api.resume(sandboxID, 3600);
-        void load();
+        await load();
       } catch {
-        /* ignore */
+        toastManager.add(
+          stackedThreadToast({ type: "error", title: "恢复沙箱失败", description: "请重试。" }),
+        );
+      } finally {
+        setPendingAction(null);
       }
     },
     [api, load],
@@ -140,6 +158,7 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
 
   const handleDelete = useCallback(
     async (sandboxID: string) => {
+      setPendingAction({ sandboxID, action: "delete" });
       try {
         await api.delete(sandboxID);
         for (const [envId, entry] of catalog.entries) {
@@ -151,7 +170,11 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
         }
         setSandboxes((prev) => prev.filter((s) => s.sandboxID !== sandboxID));
       } catch {
-        /* ignore */
+        toastManager.add(
+          stackedThreadToast({ type: "error", title: "删除沙箱失败", description: "请重试。" }),
+        );
+      } finally {
+        setPendingAction(null);
       }
     },
     [api, removeEnv, catalog.entries],
@@ -231,7 +254,9 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
           key={sandbox.sandboxID}
           sandbox={sandbox}
           fallbackDomain={creds.credentials.sandboxDomain}
-          isConnecting={connecting === sandbox.sandboxID}
+          pendingAction={
+            pendingAction?.sandboxID === sandbox.sandboxID ? pendingAction.action : null
+          }
           onConnect={() => void handleConnect(sandbox)}
           onPause={() => void handlePause(sandbox.sandboxID)}
           onResume={() => void handleResume(sandbox.sandboxID)}

@@ -15,7 +15,7 @@ import { Card, CardHeader, CardTitle, CardPanel, CardFooter } from "../ui/card";
 interface Props {
   readonly sandbox: SandboxInfo;
   readonly fallbackDomain?: string;
-  readonly isConnecting: boolean;
+  readonly pendingAction: SandboxAction | null;
   readonly onConnect: () => void;
   readonly onPause: () => void;
   readonly onResume: () => void;
@@ -23,9 +23,11 @@ interface Props {
   readonly onDelete: () => void;
 }
 
+export type SandboxAction = "connect" | "pause" | "resume" | "refresh" | "delete";
+
 export function SandboxCard({
   sandbox,
-  isConnecting,
+  pendingAction,
   onConnect,
   onPause,
   onResume,
@@ -72,30 +74,42 @@ export function SandboxCard({
         <div className="flex flex-wrap items-center gap-2">
           {sandbox.state === "running" ? (
             <>
-              <Button size="xs" onClick={onConnect} disabled={isConnecting}>
-                {isConnecting && <LoaderCircleIcon className="size-3 animate-spin" />}
-                {isConnecting ? "连接中" : "连接"}
+              <Button size="xs" onClick={onConnect} disabled={pendingAction !== null}>
+                {pendingAction === "connect" && (
+                  <LoaderCircleIcon className="size-3 animate-spin" />
+                )}
+                {pendingAction === "connect" ? "连接中" : "连接"}
               </Button>
               <Button
                 size="icon-xs"
                 variant="outline"
                 onClick={onPause}
+                disabled={pendingAction !== null}
                 aria-label="暂停"
                 title="暂停"
               >
-                <PauseIcon className="size-3" />
+                {pendingAction === "pause" ? (
+                  <LoaderCircleIcon className="size-3 animate-spin" />
+                ) : (
+                  <PauseIcon className="size-3" />
+                )}
               </Button>
             </>
           ) : (
-            <Button size="xs" onClick={onResume}>
-              <PlayIcon className="size-3" />
-              恢复
+            <Button size="xs" onClick={onResume} disabled={pendingAction !== null}>
+              {pendingAction === "resume" ? (
+                <LoaderCircleIcon className="size-3 animate-spin" />
+              ) : (
+                <PlayIcon className="size-3" />
+              )}
+              {pendingAction === "resume" ? "恢复中" : "恢复"}
             </Button>
           )}
           <Button
             size="icon-xs"
             variant="outline"
             onClick={onRefresh}
+            disabled={pendingAction !== null}
             aria-label="刷新"
             title="刷新"
           >
@@ -105,11 +119,16 @@ export function SandboxCard({
             size="icon-xs"
             variant="outline"
             onClick={onDelete}
+            disabled={pendingAction !== null}
             className="text-destructive-foreground"
             aria-label="删除"
             title="删除"
           >
-            <Trash2Icon className="size-3" />
+            {pendingAction === "delete" ? (
+              <LoaderCircleIcon className="size-3 animate-spin" />
+            ) : (
+              <Trash2Icon className="size-3" />
+            )}
           </Button>
         </div>
       </CardFooter>
