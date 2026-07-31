@@ -186,13 +186,16 @@ export interface SandboxSkill {
 export function buildSkillInstallCommands(skills: ReadonlyArray<SandboxSkill>): string[] {
   if (skills.length === 0) return [];
   const commands: string[] = [];
-  commands.push("mkdir -p /home/user/.codex/skills /home/user/.opencode/skills");
+  commands.push(
+    "mkdir -p /home/user/.codex/skills /home/user/.config/opencode/skills /home/user/.opencode/skills",
+  );
   for (const skill of skills) {
     const bytes = new TextEncoder().encode(skill.content);
     const encoded = bytesToBase64(bytes);
     commands.push(
-      `mkdir -p /home/user/.codex/skills/${skill.name} /home/user/.opencode/skills/${skill.name}`,
+      `mkdir -p /home/user/.codex/skills/${skill.name} /home/user/.config/opencode/skills/${skill.name} /home/user/.opencode/skills/${skill.name}`,
       `printf '%s' ${encoded} | base64 -d > /home/user/.codex/skills/${skill.name}/SKILL.md`,
+      `cp /home/user/.codex/skills/${skill.name}/SKILL.md /home/user/.config/opencode/skills/${skill.name}/SKILL.md`,
       `cp /home/user/.codex/skills/${skill.name}/SKILL.md /home/user/.opencode/skills/${skill.name}/SKILL.md`,
     );
   }
