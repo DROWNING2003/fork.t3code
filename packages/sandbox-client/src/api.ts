@@ -2,7 +2,7 @@ import type { SandboxCreateInput, SandboxInfo } from "@t3tools/shared/sandbox";
 import { DEFAULT_SANDBOX_API_URL } from "@t3tools/shared/sandbox";
 import type { SandboxClientOptions } from "./types";
 
-const SANDBOX_API_TIMEOUT_MS = 15_000;
+export const SANDBOX_API_TIMEOUT_MS = 60_000;
 
 export interface SandboxListOptions {
   readonly metadata?: Readonly<Record<string, string>>;

@@ -13,6 +13,9 @@ import type { T3StartOptions } from "./types";
 const CODEX_AUTH_PATH = "/home/user/.codex/auth.json";
 const CODEX_CONFIG_PATH = "/home/user/.codex/config.toml";
 const MOBILE_PAIRING_PATH = "/home/user/.t3/mobile-pairing.json";
+export const T3_SERVER_RETRY_DELAY_MS = 3_000;
+export const PAIRING_ATTEMPT_DELAY_MS = 5_000;
+export const PAIRING_FILE_POLL_DELAY_MS = 1_000;
 
 function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\"'\"'")}'`;
@@ -200,18 +203,20 @@ export async function waitForT3Server(
   options?: {
     readonly fetchImpl?: typeof fetch;
     readonly retryCount?: number;
+    readonly retryDelayMs?: number;
     readonly wait?: (ms: number) => Promise<void>;
   },
 ): Promise<void> {
   const fetchImpl = options?.fetchImpl ?? fetch;
   const retries = options?.retryCount ?? 30;
+  const retryDelay = options?.retryDelayMs ?? T3_SERVER_RETRY_DELAY_MS;
   const wait = options?.wait ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetchImpl(serverUrl, { signal: AbortSignal.timeout(3000) });
       if (res.ok) return;
     } catch {}
-    if (i + 1 < retries) await wait(2000);
+    if (i + 1 < retries) await wait(retryDelay);
   }
   throw new Error(`T3 Server did not become ready at ${serverUrl}`);
 }
@@ -248,7 +253,12 @@ export async function getT3PairingUrl(
   domain: string | null | undefined,
   fallbackDomain: string | null | undefined,
   access?: { readonly envdAccessToken?: string; readonly trafficAccessToken?: string | null },
-  options?: { readonly fetchImpl?: typeof fetch; readonly pairingCommand?: string },
+  options?: {
+    readonly fetchImpl?: typeof fetch;
+    readonly pairingCommand?: string;
+    readonly attemptDelayMs?: number;
+    readonly pairingPollDelayMs?: number;
+  },
 ): Promise<string> {
   const serverUrl = sandboxUrl(sandboxID, domain, fallbackDomain, DEFAULT_T3_PORT);
   if (!serverUrl) throw new Error("Could not resolve T3 server URL.");
@@ -264,13 +274,15 @@ export async function getT3PairingUrl(
 
   const fileUrl = envdFileUrl(sandboxID, domain, fallbackDomain, MOBILE_PAIRING_PATH);
   const pairingCmd = options?.pairingCommand ?? buildT3PairingCommand(serverUrl);
+  const attemptDelay = options?.attemptDelayMs ?? PAIRING_ATTEMPT_DELAY_MS;
+  const pairingPollDelay = options?.pairingPollDelayMs ?? PAIRING_FILE_POLL_DELAY_MS;
   for (let attempt = 0; attempt < 6; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 2000));
+    if (attempt > 0) await new Promise((r) => setTimeout(r, attemptDelay));
     const issued = await envdProcessStart(envdBase, headers, pairingCmd, { fetchImpl });
     if (!issued.ok) continue;
 
     for (let i = 0; i < 15; i++) {
-      if (i > 0) await new Promise((r) => setTimeout(r, 500));
+      if (i > 0) await new Promise((r) => setTimeout(r, pairingPollDelay));
       const pairFile = await envdFileRead(fileUrl, headers, { fetchImpl, retryCount: 1 });
       if (!pairFile) continue;
       const text = await pairFile.text();

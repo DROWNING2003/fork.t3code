@@ -1,6 +1,11 @@
 import { ENVD_PORT, sandboxUrl } from "@t3tools/shared/sandbox";
 import type { EnvdAccess } from "./types";
 
+export const ENVD_HEALTH_CHECK_TIMEOUT_MS = 5_000;
+export const ENVD_HEALTH_CHECK_RETRY_DELAY_MS = 3_000;
+export const ENVD_PROCESS_START_TIMEOUT_MS = 60_000;
+export const ENVD_FILE_RETRY_DELAY_MS = 1_000;
+
 export function envdHeaders(access: EnvdAccess): Record<string, string> {
   return {
     Authorization: "Basic dXNlcjo=",
@@ -52,14 +57,14 @@ export async function envdHealthCheck(
 ): Promise<boolean> {
   const fetchImpl = options?.fetchImpl ?? fetch;
   const retries = options?.retryCount ?? 30;
-  const delay = options?.retryDelayMs ?? 2000;
+  const delay = options?.retryDelayMs ?? ENVD_HEALTH_CHECK_RETRY_DELAY_MS;
   const wait = options?.wait ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetchImpl(`${envdBase}/health`, {
         method: "GET",
         headers,
-        signal: AbortSignal.timeout(3000),
+        signal: AbortSignal.timeout(ENVD_HEALTH_CHECK_TIMEOUT_MS),
       });
       if (res.ok) return true;
     } catch {}
@@ -79,7 +84,7 @@ export async function envdProcessStart(
     method: "POST",
     headers,
     body: createEnvdProcessRequest(command),
-    signal: AbortSignal.timeout(options?.timeoutMs ?? 30_000),
+    signal: AbortSignal.timeout(options?.timeoutMs ?? ENVD_PROCESS_START_TIMEOUT_MS),
   });
 }
 
@@ -95,7 +100,7 @@ export async function envdFileRead(
 ): Promise<Response | null> {
   const fetchImpl = options?.fetchImpl ?? fetch;
   const retries = options?.retryCount ?? 30;
-  const delay = options?.retryDelayMs ?? 500;
+  const delay = options?.retryDelayMs ?? ENVD_FILE_RETRY_DELAY_MS;
   const wait = options?.wait ?? ((ms: number) => new Promise((r) => setTimeout(r, ms)));
   for (let i = 0; i < retries; i++) {
     try {
