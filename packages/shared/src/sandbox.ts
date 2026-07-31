@@ -273,6 +273,7 @@ export const DEFAULT_SANDBOX_API_URL = "https://cn-yangzhou-1-sandbox.qiniuapi.c
 export const DEFAULT_SANDBOX_DOMAIN = "";
 export const DEFAULT_OPENAI_BASE_URL = "https://api.fenno.ai";
 export const DEFAULT_TEMPLATE_ID = "usrrhp4zsns5yyithi8a";
+export const BOUNDLY_SANDBOX_METADATA = { app: "boundly" } as const;
 export const DEFAULT_TIMEOUT_HOURS = 3;
 export const DEFAULT_T3_PORT = 8080;
 export const ENVD_PORT = 49983;

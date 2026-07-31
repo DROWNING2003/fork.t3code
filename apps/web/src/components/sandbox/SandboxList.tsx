@@ -4,6 +4,7 @@ import { CloudIcon, LoaderIcon, PlusIcon, Settings2Icon } from "lucide-react";
 import * as Option from "effect/Option";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { BOUNDLY_SANDBOX_METADATA } from "@t3tools/shared/sandbox";
 
 import { environmentCatalog } from "../../connection/catalog";
 import { useSandboxCredentials } from "../../hooks/useSandboxCredentials";
@@ -19,6 +20,7 @@ import {
   EmptyMedia,
 } from "../ui/empty";
 import { SandboxCard } from "./SandboxCard";
+import { Toggle, ToggleGroup } from "../ui/toggle-group";
 
 const SANDBOX_ID_REGEX = /^(?:\d+)-([a-z0-9]+)\./i;
 
@@ -49,6 +51,7 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
   const [sandboxes, setSandboxes] = useState<readonly SandboxInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [scope, setScope] = useState<"boundly" | "all">("boundly");
   const catalog = useAtomValue(environmentCatalog.catalogValueAtom);
   const removeEnv = useAtomCommand(environmentCatalog.remove, "sandbox environment remove");
 
@@ -59,14 +62,18 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
     }
     setLoading(true);
     try {
-      const list = await api.list();
-      const apiIds = new Set(list.map((s) => s.sandboxID));
-      for (const [envId, entry] of catalog.entries) {
-        const httpBaseUrl = getHttpBaseUrl(entry);
-        if (!httpBaseUrl) continue;
-        const sandboxID = sandboxIdFromUrl(httpBaseUrl);
-        if (sandboxID && !apiIds.has(sandboxID)) {
-          await removeEnv(envId);
+      const list = await api.list(
+        scope === "boundly" ? { metadata: BOUNDLY_SANDBOX_METADATA } : undefined,
+      );
+      if (scope === "all") {
+        const apiIds = new Set(list.map((s) => s.sandboxID));
+        for (const [envId, entry] of catalog.entries) {
+          const httpBaseUrl = getHttpBaseUrl(entry);
+          if (!httpBaseUrl) continue;
+          const sandboxID = sandboxIdFromUrl(httpBaseUrl);
+          if (sandboxID && !apiIds.has(sandboxID)) {
+            await removeEnv(envId);
+          }
         }
       }
       setSandboxes(list);
@@ -75,7 +82,7 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
     } finally {
       setLoading(false);
     }
-  }, [api, creds.hasRequired, removeEnv, catalog.entries]);
+  }, [api, creds.hasRequired, removeEnv, catalog.entries, scope]);
 
   useEffect(() => {
     void load();
@@ -199,9 +206,24 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
 
   return (
     <div className="flex flex-col gap-3 p-6 md:p-12">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{sandboxes.length} 个沙箱</p>
-        <Button size="xs" variant="outline" onClick={load}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted-foreground">{sandboxes.length} 个沙箱</p>
+          <ToggleGroup
+            aria-label="沙箱范围"
+            size="xs"
+            variant="outline"
+            value={[scope]}
+            onValueChange={(value) => {
+              const next = value[0];
+              if (next === "boundly" || next === "all") setScope(next);
+            }}
+          >
+            <Toggle value="boundly">本应用</Toggle>
+            <Toggle value="all">全部</Toggle>
+          </ToggleGroup>
+        </div>
+        <Button size="xs" variant="outline" onClick={() => void load()}>
           刷新
         </Button>
       </div>

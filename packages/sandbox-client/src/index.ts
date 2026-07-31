@@ -34,7 +34,7 @@ export {
 } from "@t3tools/shared/sandbox";
 
 export { createSandboxApi, buildCreateBody, resolveApiUrl } from "./api";
-export type { SandboxApi } from "./api";
+export type { SandboxApi, SandboxListOptions } from "./api";
 
 export {
   envdHeaders,

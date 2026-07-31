@@ -1,4 +1,9 @@
-import type { SandboxCreateInput, SandboxInjection, SandboxInfo } from "@t3tools/shared/sandbox";
+import {
+  BOUNDLY_SANDBOX_METADATA,
+  type SandboxCreateInput,
+  type SandboxInjection,
+  type SandboxInfo,
+} from "@t3tools/shared/sandbox";
 import { LoaderIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -43,7 +48,10 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
         timeout: hours * 3600,
         autoPause: true,
         network: { allowPublicTraffic: true },
-        ...(name.trim() ? { metadata: { name: name.trim() } } : {}),
+        metadata: {
+          ...BOUNDLY_SANDBOX_METADATA,
+          ...(name.trim() ? { name: name.trim() } : {}),
+        },
         ...(injections.length > 0 ? { injections } : {}),
       };
       if (githubRepo.trim()) {

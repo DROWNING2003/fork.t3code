@@ -12,7 +12,11 @@ import { useSandboxApi } from "./useSandboxApi";
 import { useSandboxCredentials } from "./useSandboxCredentials";
 import { getAdditionalInjections } from "./useSandboxCredentials";
 import { useRemoteConnections } from "../../state/use-remote-environment-registry";
-import { detectCodexProviders, DEFAULT_SANDBOX_SKILLS } from "@t3tools/shared/sandbox";
+import {
+  BOUNDLY_SANDBOX_METADATA,
+  detectCodexProviders,
+  DEFAULT_SANDBOX_SKILLS,
+} from "@t3tools/shared/sandbox";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/unstable/reactivity";
 import {
@@ -89,7 +93,10 @@ export function SandboxNewSheet() {
         network: { allowPublicTraffic: true },
         envVars,
         ...(merged ? { injections: merged } : {}),
-        ...(name.trim() ? { metadata: { name: name.trim() } } : {}),
+        metadata: {
+          ...BOUNDLY_SANDBOX_METADATA,
+          ...(name.trim() ? { name: name.trim() } : {}),
+        },
         resources,
       });
 

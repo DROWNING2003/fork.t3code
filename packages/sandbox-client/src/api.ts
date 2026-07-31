@@ -4,6 +4,16 @@ import type { SandboxClientOptions } from "./types";
 
 const SANDBOX_API_TIMEOUT_MS = 15_000;
 
+export interface SandboxListOptions {
+  readonly metadata?: Readonly<Record<string, string>>;
+}
+
+function buildMetadataQuery(metadata: Readonly<Record<string, string>>): string {
+  return Object.entries(metadata)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+}
+
 export function resolveApiUrl(apiUrl?: string): string {
   return apiUrl?.trim().replace(/\/+$/, "") || DEFAULT_SANDBOX_API_URL;
 }
@@ -54,7 +64,14 @@ export function createSandboxApi(options: SandboxClientOptions) {
         body: JSON.stringify(buildCreateBody(input)),
       }),
 
-    list: (): Promise<SandboxInfo[]> => request<SandboxInfo[]>("/sandboxes"),
+    list: (options?: SandboxListOptions): Promise<SandboxInfo[]> => {
+      const metadata = options?.metadata;
+      const query =
+        metadata && Object.keys(metadata).length > 0
+          ? `?metadata=${encodeURIComponent(buildMetadataQuery(metadata))}`
+          : "";
+      return request<SandboxInfo[]>(`/v2/sandboxes${query}`);
+    },
 
     get: (sandboxID: string): Promise<SandboxInfo> =>
       request<SandboxInfo>(`/sandboxes/${encodeURIComponent(sandboxID)}`),
