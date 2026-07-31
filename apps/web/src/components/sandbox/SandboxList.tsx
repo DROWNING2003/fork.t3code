@@ -186,21 +186,32 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
 
   if (sandboxes.length === 0) {
     return (
-      <Empty className="flex-1">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <CloudIcon className="size-4.5" />
-          </EmptyMedia>
-          <EmptyTitle>没有沙箱</EmptyTitle>
-          <EmptyDescription>创建一个远程沙箱来开始开发</EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button size="sm" onClick={onNavigateToCreate}>
-            <PlusIcon className="size-4" />
-            创建沙箱
+      <div className="flex min-h-0 flex-1 flex-col gap-3 p-6 md:p-12">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-muted-foreground">0 个沙箱</p>
+            <SandboxScopeToggle scope={scope} onScopeChange={setScope} />
+          </div>
+          <Button size="xs" variant="outline" onClick={() => void load()}>
+            刷新
           </Button>
-        </EmptyContent>
-      </Empty>
+        </div>
+        <Empty className="flex-1">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CloudIcon className="size-4.5" />
+            </EmptyMedia>
+            <EmptyTitle>没有沙箱</EmptyTitle>
+            <EmptyDescription>创建一个远程沙箱来开始开发</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button size="sm" onClick={onNavigateToCreate}>
+              <PlusIcon className="size-4" />
+              创建沙箱
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </div>
     );
   }
 
@@ -209,19 +220,7 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <p className="text-sm text-muted-foreground">{sandboxes.length} 个沙箱</p>
-          <ToggleGroup
-            aria-label="沙箱范围"
-            size="xs"
-            variant="outline"
-            value={[scope]}
-            onValueChange={(value) => {
-              const next = value[0];
-              if (next === "boundly" || next === "all") setScope(next);
-            }}
-          >
-            <Toggle value="boundly">本应用</Toggle>
-            <Toggle value="all">全部</Toggle>
-          </ToggleGroup>
+          <SandboxScopeToggle scope={scope} onScopeChange={setScope} />
         </div>
         <Button size="xs" variant="outline" onClick={() => void load()}>
           刷新
@@ -241,5 +240,29 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
         />
       ))}
     </div>
+  );
+}
+
+function SandboxScopeToggle({
+  scope,
+  onScopeChange,
+}: {
+  readonly scope: "boundly" | "all";
+  readonly onScopeChange: (scope: "boundly" | "all") => void;
+}) {
+  return (
+    <ToggleGroup
+      aria-label="沙箱范围"
+      size="xs"
+      variant="outline"
+      value={[scope]}
+      onValueChange={(value) => {
+        const next = value[0];
+        if (next === "boundly" || next === "all") onScopeChange(next);
+      }}
+    >
+      <Toggle value="boundly">本应用</Toggle>
+      <Toggle value="all">全部</Toggle>
+    </ToggleGroup>
   );
 }
