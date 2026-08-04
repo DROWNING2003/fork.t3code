@@ -106,7 +106,7 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   );
 
   return (
-    <SidebarFooter className="p-2">
+    <SidebarFooter className="p-[var(--sidebar-content-inset)]">
       <SidebarProviderUpdatePill />
       <SidebarUpdatePill />
       <SidebarMenu>
