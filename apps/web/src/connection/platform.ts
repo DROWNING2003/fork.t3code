@@ -57,6 +57,7 @@ import {
   readDesktopSecondaryBootstrapsResult,
   type DesktopSecondaryBootstrapsRead,
 } from "./desktopLocal";
+import { shouldProbeCurrentSandboxEnvironment } from "./sandboxPrimaryGate";
 import { connectionStorageLayer } from "./storage";
 
 let nextObservedRpcRequestId = 0;
@@ -363,6 +364,10 @@ const loadSecondaryConnectionRegistration = Effect.fn(
 const PLATFORM_POLL_INTERVAL = "3 seconds";
 const SECONDARY_BEARER_REFRESH_SKEW_MS = 5_000;
 
+export function platformTopologyRefreshMode(hasDesktopBridge: boolean): "poll" | "once" {
+  return hasDesktopBridge ? "poll" : "once";
+}
+
 export function secondaryBearerExpiresAtEpochMs(
   issuedAtEpochMs: number,
   expiresInSeconds: number,
@@ -488,26 +493,46 @@ const platformConnectionSourceLayer = Layer.effect(
           cause: primaryTopologyRead.cause,
         });
       } else if (primaryTopologyRead.target !== null) {
-        const primaryTarget = primaryTopologyRead.target;
-        const signature = `primary|${primaryTarget.target.httpBaseUrl}|${primaryTarget.target.wsBaseUrl}`;
-        const cached = previous.get(PRIMARY_LOCAL_ENVIRONMENT_ID);
-        if (
-          cached !== undefined &&
-          canReuseCachedPlatformRegistration(cached, signature, nowEpochMs)
-        ) {
-          next.set(PRIMARY_LOCAL_ENVIRONMENT_ID, cached);
-          registrations.push(cached.registration);
-        } else {
-          const built = yield* loadPrimaryConnectionRegistration(primaryTarget).pipe(
-            Effect.tapError((error) =>
-              Effect.logWarning("Could not discover the primary environment.", { error }),
-            ),
-            Effect.option,
-          );
-          if (Option.isSome(built)) {
-            const cacheEntry = { signature, registration: built.value };
-            next.set(PRIMARY_LOCAL_ENVIRONMENT_ID, cacheEntry);
-            registrations.push(built.value);
+        const shouldProbePrimary = yield* Effect.tryPromise({
+          try: shouldProbeCurrentSandboxEnvironment,
+          catch: (cause) =>
+            new ConnectionTransientError({
+              reason: "network",
+              detail: `Could not read the current sandbox state: ${
+                cause instanceof Error ? cause.message : String(cause)
+              }`,
+            }),
+        }).pipe(
+          Effect.tapError((cause) =>
+            Effect.logWarning("Could not read the current sandbox state before discovery.", {
+              cause,
+            }),
+          ),
+          Effect.orElseSucceed(() => true),
+        );
+
+        if (shouldProbePrimary) {
+          const primaryTarget = primaryTopologyRead.target;
+          const signature = `primary|${primaryTarget.target.httpBaseUrl}|${primaryTarget.target.wsBaseUrl}`;
+          const cached = previous.get(PRIMARY_LOCAL_ENVIRONMENT_ID);
+          if (
+            cached !== undefined &&
+            canReuseCachedPlatformRegistration(cached, signature, nowEpochMs)
+          ) {
+            next.set(PRIMARY_LOCAL_ENVIRONMENT_ID, cached);
+            registrations.push(cached.registration);
+          } else {
+            const built = yield* loadPrimaryConnectionRegistration(primaryTarget).pipe(
+              Effect.tapError((error) =>
+                Effect.logWarning("Could not discover the primary environment.", { error }),
+              ),
+              Effect.option,
+            );
+            if (Option.isSome(built)) {
+              const cacheEntry = { signature, registration: built.value };
+              next.set(PRIMARY_LOCAL_ENVIRONMENT_ID, cacheEntry);
+              registrations.push(built.value);
+            }
           }
         }
       }
@@ -565,11 +590,16 @@ const platformConnectionSourceLayer = Layer.effect(
       return registrations as ReadonlyArray<PlatformConnectionRegistration>;
     }).pipe(Effect.provide(FetchHttpClient.layer));
 
-    return PlatformConnectionSource.of({
-      registrations: Stream.tick(PLATFORM_POLL_INTERVAL).pipe(
-        Stream.mapEffect(() => buildPlatformRegistrations),
-      ),
-    });
+    // Browser targets are fixed for the page lifetime; only Electron can report changing topology.
+    const refreshMode = platformTopologyRefreshMode(window.desktopBridge !== undefined);
+    const registrations =
+      refreshMode === "poll"
+        ? Stream.tick(PLATFORM_POLL_INTERVAL).pipe(
+            Stream.mapEffect(() => buildPlatformRegistrations),
+          )
+        : Stream.fromEffect(buildPlatformRegistrations);
+
+    return PlatformConnectionSource.of({ registrations });
   }),
 );
 

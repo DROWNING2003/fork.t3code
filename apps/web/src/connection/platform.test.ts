@@ -11,6 +11,7 @@ import * as Effect from "effect/Effect";
 import {
   canRetainCachedPlatformRegistrationAfterRefreshFailure,
   canReuseCachedPlatformRegistration,
+  platformTopologyRefreshMode,
   primaryRegistrationToRetainAfterTopologyRead,
   provisionDesktopSshEnvironment,
   readPrimaryEnvironmentTargetResult,
@@ -221,5 +222,12 @@ describe("primary topology cache", () => {
         target: null,
       }),
     ).toBeUndefined();
+  });
+});
+
+describe("platform topology refresh", () => {
+  it("polls only when the desktop bridge can report topology changes", () => {
+    expect(platformTopologyRefreshMode(true)).toBe("poll");
+    expect(platformTopologyRefreshMode(false)).toBe("once");
   });
 });
