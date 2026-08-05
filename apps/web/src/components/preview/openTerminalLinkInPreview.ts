@@ -6,6 +6,7 @@ import * as Schema from "effect/Schema";
 import type { OpenPreviewMutation } from "~/browser/openFileInPreview";
 import { applyPreviewServerSnapshot, isPreviewSupportedInRuntime } from "~/previewStateStore";
 import { useRightPanelStore } from "~/rightPanelStore";
+import { isSandboxOnlyWeb } from "~/webSurface";
 
 const terminalLinkErrorContext = {
   environmentId: Schema.String,
@@ -46,7 +47,7 @@ export async function openTerminalLinkInPreview<E>(
 ): Promise<void> {
   const supportsPreview =
     isPreviewableUrl(input.url) &&
-    isPreviewSupportedInRuntime() &&
+    (isPreviewSupportedInRuntime() || isSandboxOnlyWeb) &&
     input.threadRef.threadId.length > 0;
 
   if (!supportsPreview) {

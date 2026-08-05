@@ -17,6 +17,7 @@ import { isTerminalFocused } from "../lib/terminalFocus";
 import { resolveShortcutCommand } from "../keybindings";
 import { selectThreadTerminalUiState, useTerminalUiStateStore } from "../terminalUiStateStore";
 import { isPreviewSupportedInRuntime } from "../previewStateStore";
+import { isSandboxOnlyWeb } from "../webSurface";
 import { selectActiveRightPanel, useRightPanelStore } from "../rightPanelStore";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { stackedThreadToast, toastManager } from "~/components/ui/toast";
@@ -112,7 +113,7 @@ function ChatRouteGlobalShortcuts() {
         event.preventDefault();
         event.stopPropagation();
         if (!routeThreadRef) return;
-        if (!isPreviewSupportedInRuntime()) {
+        if (!isPreviewSupportedInRuntime() && !isSandboxOnlyWeb) {
           toastManager.add(
             stackedThreadToast({
               type: "info",
@@ -129,6 +130,11 @@ function ChatRouteGlobalShortcuts() {
       // The remaining preview commands only fire when the panel is the
       // currently-focused tenant. The `when: previewFocus` rule already
       // gates this, but defend against the keybinding being misconfigured.
+      const isPreviewZoomCommand =
+        command === "preview.zoomIn" ||
+        command === "preview.zoomOut" ||
+        command === "preview.resetZoom";
+      if (isPreviewZoomCommand && !isPreviewSupportedInRuntime()) return;
       if (
         command === "preview.refresh" ||
         command === "preview.focusUrl" ||

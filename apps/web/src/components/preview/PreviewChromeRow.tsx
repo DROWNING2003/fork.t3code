@@ -36,8 +36,10 @@ interface Props {
   onForward: () => void;
   onRefresh: () => void;
   onSubmit: (url: string) => void;
-  /** When provided, renders an "Open in browser" affordance to the right. */
+  /** When provided, renders an "Open in browser" affordance. */
   onOpenInBrowser?: (() => void) | undefined;
+  /** Places the external-browser action beside the navigation controls. */
+  openInBrowserInNavigation?: boolean | undefined;
   onCapture?: ((record: boolean) => void) | undefined;
   captureDisabled?: boolean | undefined;
   recording?: boolean | undefined;
@@ -78,6 +80,7 @@ export function PreviewChromeRow({
   onRefresh,
   onSubmit,
   onOpenInBrowser,
+  openInBrowserInNavigation = false,
   onCapture,
   captureDisabled,
   recording,
@@ -164,6 +167,24 @@ export function PreviewChromeRow({
             </TooltipTrigger>
             <TooltipPopup>{loading ? "Loading…" : "Refresh"}</TooltipPopup>
           </Tooltip>
+          {onOpenInBrowser && openInBrowserInNavigation ? (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={onOpenInBrowser}
+                    aria-label="Open in system browser"
+                    type="button"
+                  />
+                }
+              >
+                <ExternalLink />
+              </TooltipTrigger>
+              <TooltipPopup>Open in system browser</TooltipPopup>
+            </Tooltip>
+          ) : null}
         </div>
 
         <InputGroup variant="ghost" className="group/address h-7 flex-1 rounded-md">
@@ -175,6 +196,7 @@ export function PreviewChromeRow({
                   value={inputFocused ? draft : (displayUrl ?? url)}
                   className={cn(
                     onOpenInBrowser &&
+                      !openInBrowserInNavigation &&
                       !inputFocused &&
                       "group-hover/address:pe-7 transition-[padding]",
                   )}
@@ -205,7 +227,7 @@ export function PreviewChromeRow({
             />
             {!inputFocused && displayUrl ? <TooltipPopup>{url}</TooltipPopup> : null}
           </Tooltip>
-          {onOpenInBrowser && !inputFocused ? (
+          {onOpenInBrowser && !openInBrowserInNavigation && !inputFocused ? (
             <InputGroupAddon
               align="inline-end"
               className="pointer-events-none absolute inset-y-0 right-0 opacity-0 transition-opacity group-hover/address:pointer-events-auto group-hover/address:opacity-100"

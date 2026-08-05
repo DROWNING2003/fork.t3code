@@ -6,19 +6,18 @@ afterEach(() => {
 });
 
 describe("Vercel configuration", () => {
-  it("enables Git deployments for the sandbox-only project", async () => {
-    vi.stubEnv("VITE_BOUNDLY_WEB_SURFACE", "sandbox");
-
+  it("enables Git deployments for the fork integration branch", async () => {
     const { config } = await import("../vercel");
 
-    expect(config.git?.deploymentEnabled).toBe(true);
+    expect(config.git?.deploymentEnabled).toEqual({
+      "personal/*": true,
+      "*": false,
+    });
   });
 
-  it("keeps the upstream hosted Web deployment disabled", async () => {
-    vi.stubEnv("VITE_BOUNDLY_WEB_SURFACE", "");
-
+  it("keeps non-fork branches opt-in", async () => {
     const { config } = await import("../vercel");
 
-    expect(config.git?.deploymentEnabled).toBe(false);
+    expect(config.git?.deploymentEnabled).toMatchObject({ "*": false });
   });
 });

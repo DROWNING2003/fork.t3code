@@ -3,13 +3,39 @@ import { EnvironmentId, ProjectId } from "@t3tools/contracts";
 
 import {
   buildSandboxProjectCreateInput,
+  findLegacySandboxProject,
   findSandboxProject,
   findConnectedSandboxMissingProject,
   selectProjectsForActiveEnvironment,
+  LEGACY_SANDBOX_PROJECT_WORKSPACE_ROOT,
   SANDBOX_PROJECT_WORKSPACE_ROOT,
 } from "./sandboxProject";
 
 describe("sandbox projects", () => {
+  it("finds legacy sandbox projects only when the repository project is absent", () => {
+    const environmentId = EnvironmentId.make("sandbox-environment");
+    const legacyProject = {
+      environmentId,
+      id: ProjectId.make("legacy-project"),
+      workspaceRoot: LEGACY_SANDBOX_PROJECT_WORKSPACE_ROOT,
+    };
+
+    expect(findLegacySandboxProject([legacyProject], new Set([environmentId]))).toBe(legacyProject);
+    expect(
+      findLegacySandboxProject(
+        [
+          legacyProject,
+          {
+            environmentId,
+            id: ProjectId.make("repository-project"),
+            workspaceRoot: SANDBOX_PROJECT_WORKSPACE_ROOT,
+          },
+        ],
+        new Set([environmentId]),
+      ),
+    ).toBeNull();
+  });
+
   it("reuses a project that already belongs to the connected sandbox", () => {
     const sandboxEnvironmentId = EnvironmentId.make("sandbox-environment");
     const sandboxProjectId = ProjectId.make("sandbox-project");
@@ -25,16 +51,17 @@ describe("sandbox projects", () => {
     ).toBe(sandboxProjectId);
   });
 
-  it("creates a usable default project at the sandbox home directory", () => {
+  it("creates the default project at the sandbox repository mount", () => {
     const projectId = ProjectId.make("sandbox-project");
 
     expect(buildSandboxProjectCreateInput(projectId)).toEqual({
       projectId,
       title: "Boundly Sandbox",
-      workspaceRoot: SANDBOX_PROJECT_WORKSPACE_ROOT,
+      workspaceRoot: "/home/user/project",
       createWorkspaceRootIfMissing: true,
       defaultModelSelection: null,
     });
+    expect(SANDBOX_PROJECT_WORKSPACE_ROOT).toBe("/home/user/project");
   });
 
   it("waits for a connected sandbox before creating its project", () => {

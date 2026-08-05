@@ -14,6 +14,8 @@ import { newProjectId } from "../lib/utils";
 import {
   buildSandboxProjectCreateInput,
   findConnectedSandboxMissingProject,
+  findLegacySandboxProject,
+  SANDBOX_PROJECT_WORKSPACE_ROOT,
   selectProjectsForActiveEnvironment,
 } from "../sandboxProject";
 import {
@@ -24,7 +26,9 @@ import {
 } from "../state/entities";
 import { useEnvironments } from "../state/environments";
 import { projectEnvironment } from "../state/projects";
+import { useEnvironmentQuery } from "../state/query";
 import { useAtomCommand } from "../state/use-atom-command";
+import { vcsEnvironment } from "../state/vcs";
 import { APP_DISPLAY_NAME } from "~/branding";
 import { hasCloudPublicConfig } from "~/cloud/publicConfig";
 import { cn } from "~/lib/utils";
@@ -68,8 +72,10 @@ function IndexDraftLanding() {
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
   const handleNewThread = useNewThreadHandler();
   const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
+  const updateProject = useAtomCommand(projectEnvironment.update, { reportFailure: false });
   const startingRef = useRef(false);
   const creatingSandboxProjectsRef = useRef(new Set<string>());
+  const migratedLegacySandboxProjectIdsRef = useRef(new Set<string>());
   const [startState, setStartState] = useState({ failed: false, retryRequest: 0 });
   const sandboxEnvironmentIds = useMemo(
     () =>
@@ -93,6 +99,18 @@ function IndexDraftLanding() {
         : allThreads,
     [allThreads, sandboxEnvironmentIds],
   );
+  const legacySandboxProject = useMemo(
+    () => findLegacySandboxProject(allProjects, sandboxEnvironmentIds),
+    [allProjects, sandboxEnvironmentIds],
+  );
+  const legacySandboxRepositoryStatus = useEnvironmentQuery(
+    legacySandboxProject
+      ? vcsEnvironment.status({
+          environmentId: legacySandboxProject.environmentId,
+          input: { cwd: SANDBOX_PROJECT_WORKSPACE_ROOT },
+        })
+      : null,
+  );
 
   const mostRecentProject = useMemo(
     () =>
@@ -115,6 +133,24 @@ function IndexDraftLanding() {
       creatingSandboxProjectsRef.current.delete(environment.environmentId);
     });
   }, [allProjects, createProject, environments]);
+
+  useEffect(() => {
+    if (
+      legacySandboxProject === null ||
+      legacySandboxRepositoryStatus.data?.isRepo !== true ||
+      migratedLegacySandboxProjectIdsRef.current.has(legacySandboxProject.id)
+    ) {
+      return;
+    }
+    migratedLegacySandboxProjectIdsRef.current.add(legacySandboxProject.id);
+    void updateProject({
+      environmentId: legacySandboxProject.environmentId,
+      input: {
+        projectId: legacySandboxProject.id,
+        workspaceRoot: SANDBOX_PROJECT_WORKSPACE_ROOT,
+      },
+    });
+  }, [legacySandboxProject, legacySandboxRepositoryStatus.data?.isRepo, updateProject]);
 
   useEffect(() => {
     if (mostRecentProject === null || startingRef.current) {

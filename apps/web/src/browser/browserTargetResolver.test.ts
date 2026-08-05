@@ -41,6 +41,25 @@ describe("browser target resolver", () => {
     });
   });
 
+  it("maps localhost URL navigation onto a sandbox public preview host", async () => {
+    readPreparedConnection.mockReturnValue({
+      httpBaseUrl: "https://8080-sandbox-1.e2b.example.com",
+    });
+    const { resolveBrowserNavigationTarget } = await import("./browserTargetResolver");
+
+    expect(
+      resolveBrowserNavigationTarget(EnvironmentId.make("environment-1"), {
+        kind: "url",
+        url: "http://localhost:5173/dashboard?mode=test#results",
+      }),
+    ).toEqual({
+      requestedUrl: "http://localhost:5173/dashboard?mode=test#results",
+      resolvedUrl: "https://5173-sandbox-1.e2b.example.com/dashboard?mode=test#results",
+      resolutionKind: "direct",
+      environmentId: "environment-1",
+    });
+  });
+
   it("preserves URL credentials when mapping localhost onto a remote host", async () => {
     readPreparedConnection.mockReturnValue({ httpBaseUrl: "http://100.65.180.100:3773" });
     const { resolveBrowserNavigationTarget } = await import("./browserTargetResolver");

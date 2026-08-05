@@ -21,6 +21,7 @@ import {
   rememberPreviewUrl,
 } from "~/previewStateStore";
 import { useRightPanelStore } from "~/rightPanelStore";
+import { isSandboxOnlyWeb } from "~/webSurface";
 
 export const isBrowserPreviewFile = (path: string): boolean =>
   /\.(?:html?|pdf)$/i.test(path.split(/[?#]/, 1)[0] ?? "");
@@ -62,7 +63,7 @@ export async function openFileInPreview<AssetError, PreviewError>(input: {
   }) => Promise<AtomCommandResult<AssetCreateUrlResult, AssetError>>;
   readonly openPreview: OpenPreviewMutation<PreviewError>;
 }): Promise<AtomCommandResult<void, AssetError | PreviewError | BrowserPreviewUnavailableError>> {
-  if (!isPreviewSupportedInRuntime()) {
+  if (!isPreviewSupportedInRuntime() && !isSandboxOnlyWeb) {
     return AsyncResult.failure(
       Cause.fail(
         new BrowserPreviewUnavailableError({

@@ -3,11 +3,13 @@ import type {
   EnvironmentId,
   PreviewUrlResolution,
 } from "@t3tools/contracts";
+import { sandboxUrl } from "@t3tools/shared/sandbox";
 import { isLoopbackHost, normalizePreviewUrl } from "@t3tools/shared/preview";
 
 import { readPreparedConnection } from "~/state/session";
 
 const normalizeHostname = (host: string): string => host.toLowerCase().replace(/^\[|\]$/g, "");
+const SANDBOX_PROXY_HOSTNAME_PATTERN = /^\d+-([a-z0-9-]+)\.(.+)$/i;
 
 const parseIpv4Address = (host: string): readonly number[] | null => {
   const parts = normalizeHostname(host).split(".").map(Number);
@@ -61,13 +63,28 @@ const resolveEnvironmentPortTarget = (
   requestedUrl?: string,
   sourceUrl?: URL,
 ): PreviewUrlResolution => {
+  const protocol = target.protocol ?? "http";
+  const path = target.path?.startsWith("/") ? target.path : `/${target.path ?? ""}`;
+  const sandboxMatch = SANDBOX_PROXY_HOSTNAME_PATTERN.exec(environmentUrl.hostname);
+  if (sandboxMatch) {
+    const sandboxBaseUrl = sandboxUrl(sandboxMatch[1]!, sandboxMatch[2]!, undefined, target.port);
+    if (!sandboxBaseUrl) {
+      throw new Error("This sandbox preview URL could not be resolved.");
+    }
+    const resolved = new URL(path, sandboxBaseUrl);
+    return {
+      requestedUrl: requestedUrl ?? `${protocol}://localhost:${target.port}${path}`,
+      resolvedUrl: resolved.toString(),
+      resolutionKind: "direct",
+      environmentId,
+    };
+  }
+
   if (!isPrivateNetworkHost(environmentUrl.hostname)) {
     throw new Error(
       "This environment port needs the planned authenticated preview gateway; its server address is not directly private-network reachable.",
     );
   }
-  const protocol = target.protocol ?? "http";
-  const path = target.path?.startsWith("/") ? target.path : `/${target.path ?? ""}`;
   const normalizedEnvironmentHost = environmentUrl.hostname.replace(/^\[|\]$/g, "");
   const resolvedHost = normalizedEnvironmentHost.includes(":")
     ? `[${normalizedEnvironmentHost}]`

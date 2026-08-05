@@ -85,6 +85,7 @@ import { useAtomCommand } from "../state/use-atom-command";
 import { useAtomQueryRunner } from "../state/use-atom-query-runner";
 import { writeTextToClipboard } from "../hooks/useCopyToClipboard";
 import { isPreviewSupportedInRuntime } from "../previewStateStore";
+import { isSandboxOnlyWeb } from "../webSurface";
 import {
   isBrowserPreviewFile,
   openFileInPreview,
@@ -1395,7 +1396,7 @@ function ChatMarkdown({
           onOpen={openInPreferredEditor}
           onOpenInBrowser={
             threadRef &&
-            isPreviewSupportedInRuntime() &&
+            (isPreviewSupportedInRuntime() || isSandboxOnlyWeb) &&
             isBrowserPreviewFile(fileLinkMeta.filePath)
               ? () => openMarkdownFileInPreview(fileLinkMeta.filePath)
               : undefined
@@ -1455,7 +1456,8 @@ function ChatMarkdown({
           const faviconHost = resolveExternalWebLinkHost(href);
           const isSameDocumentLink = href?.startsWith("#") ?? false;
           const onClick = props.onClick;
-          const canOpenInPreview = Boolean(threadRef) && isPreviewSupportedInRuntime();
+          const canOpenInPreview =
+            Boolean(threadRef) && (isPreviewSupportedInRuntime() || isSandboxOnlyWeb);
           const link = (
             <a
               {...props}

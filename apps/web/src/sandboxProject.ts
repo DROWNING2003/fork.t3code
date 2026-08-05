@@ -1,12 +1,33 @@
 import type { EnvironmentId, ProjectId } from "@t3tools/contracts";
 import { isSandboxUrl } from "@t3tools/shared/sandbox";
 
-export const SANDBOX_PROJECT_WORKSPACE_ROOT = "/home/user";
+export const LEGACY_SANDBOX_PROJECT_WORKSPACE_ROOT = "/home/user";
+export const SANDBOX_PROJECT_WORKSPACE_ROOT = "/home/user/project";
 
 export function findSandboxProject<
   T extends { readonly environmentId: EnvironmentId } & { readonly id: ProjectId },
 >(projects: ReadonlyArray<T>, environmentId: EnvironmentId): T | null {
   return projects.find((project) => project.environmentId === environmentId) ?? null;
+}
+
+export function findLegacySandboxProject<
+  T extends {
+    readonly environmentId: EnvironmentId;
+    readonly workspaceRoot: string;
+  },
+>(projects: ReadonlyArray<T>, sandboxEnvironmentIds: ReadonlySet<EnvironmentId>): T | null {
+  return (
+    projects.find(
+      (project) =>
+        sandboxEnvironmentIds.has(project.environmentId) &&
+        project.workspaceRoot === LEGACY_SANDBOX_PROJECT_WORKSPACE_ROOT &&
+        !projects.some(
+          (candidate) =>
+            candidate.environmentId === project.environmentId &&
+            candidate.workspaceRoot === SANDBOX_PROJECT_WORKSPACE_ROOT,
+        ),
+    ) ?? null
+  );
 }
 
 export function selectProjectsForActiveEnvironment<

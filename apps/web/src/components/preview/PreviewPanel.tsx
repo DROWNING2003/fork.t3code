@@ -3,8 +3,10 @@
 import type { ScopedThreadRef } from "@t3tools/contracts";
 
 import { isPreviewSupportedInRuntime } from "~/previewStateStore";
+import { isSandboxOnlyWeb } from "~/webSurface";
 
 import { PreviewPanelShell, type PreviewPanelMode } from "./PreviewPanelShell";
+import { SandboxPreviewPanel } from "./SandboxPreviewPanel";
 import { PreviewView } from "./PreviewView";
 
 interface Props {
@@ -17,6 +19,18 @@ interface Props {
 
 export function PreviewPanel({ mode, threadRef, tabId, configuredUrls, visible }: Props) {
   if (!isPreviewSupportedInRuntime()) {
+    if (isSandboxOnlyWeb) {
+      return (
+        <PreviewPanelShell mode={mode}>
+          <SandboxPreviewPanel
+            threadRef={threadRef}
+            tabId={tabId}
+            {...(configuredUrls !== undefined ? { configuredUrls } : {})}
+            visible={visible}
+          />
+        </PreviewPanelShell>
+      );
+    }
     return (
       <PreviewPanelShell mode={mode}>
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
