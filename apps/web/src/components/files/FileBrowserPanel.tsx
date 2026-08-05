@@ -5,8 +5,8 @@ import type {
 import type { EnvironmentId, ProjectEntry } from "@t3tools/contracts";
 import { FileTree, useFileTree, useFileTreeSearch } from "@pierre/trees/react";
 import { serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
-import { RotateCw } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { RotateCw, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { InputGroup, InputGroupInput } from "~/components/ui/input-group";
@@ -14,12 +14,14 @@ import { toastManager } from "~/components/ui/toast";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
 import { useComposerHandleContext } from "~/composerHandleContext";
 import { writeTextToClipboard } from "~/hooks/useCopyToClipboard";
+import { useSandboxFileUpload } from "~/hooks/useSandboxFileUpload";
 import { useTheme } from "~/hooks/useTheme";
 import { cn } from "~/lib/utils";
 import { readLocalApi } from "~/localApi";
 import { T3_PIERRE_ICONS } from "~/pierre-icons";
 
 import { createFileTreeDragMentionController } from "./fileTreeDragMention";
+import { SandboxUploadDialog } from "../sandbox/SandboxUploadDialog";
 import { useProjectEntriesQuery } from "./projectFilesQueryState";
 
 interface FileBrowserPanelProps {
@@ -70,6 +72,28 @@ function RefreshFilesButton(props: { isPending: boolean; onRefresh: () => void }
   );
 }
 
+function UploadFilesButton(props: { disabled: boolean; isLoading: boolean; onUpload: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="上传文件"
+            disabled={props.disabled}
+            onClick={props.onUpload}
+          />
+        }
+      >
+        <Upload className={cn("size-3.5", props.isLoading && "animate-pulse")} />
+      </TooltipTrigger>
+      <TooltipPopup>{props.isLoading ? "正在准备上传" : "上传文件到沙箱"}</TooltipPopup>
+    </Tooltip>
+  );
+}
+
 function FileSearchField(props: {
   ariaLabel: string;
   name: string;
@@ -109,6 +133,8 @@ export default function FileBrowserPanel({
   const { resolvedTheme } = useTheme();
   const composerRef = useComposerHandleContext();
   const entriesQuery = useProjectEntriesQuery(environmentId, cwd);
+  const sandboxUpload = useSandboxFileUpload(environmentId);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const entries = entriesQuery.data?.entries ?? [];
   const entryKinds = useMemo(
     () => new Map(entries.map((entry) => [entry.path, entry.kind] as const)),
@@ -255,6 +281,22 @@ export default function FileBrowserPanel({
     search.setValue(value);
   };
 
+  const handleUpload = useCallback(
+    async (files: readonly File[], directory: string) => {
+      try {
+        await sandboxUpload.upload(files, directory);
+      } finally {
+        entriesQuery.refresh();
+      }
+      toastManager.add({
+        type: "success",
+        title: "文件已上传",
+        description: `${files.length} 个文件已写入沙箱。`,
+      });
+    },
+    [entriesQuery, sandboxUpload],
+  );
+
   useEffect(() => {
     if (previousTreePathsRef.current === treePaths) return;
     entryKindsRef.current = entryKinds;
@@ -352,6 +394,13 @@ export default function FileBrowserPanel({
     >
       <div className="surface-subheader gap-1 px-2" data-surface-subheader>
         <RefreshFilesButton isPending={entriesQuery.isPending} onRefresh={entriesQuery.refresh} />
+        {sandboxUpload.canOpen ? (
+          <UploadFilesButton
+            disabled={sandboxUpload.isLoading}
+            isLoading={sandboxUpload.isLoading}
+            onUpload={() => setUploadOpen(true)}
+          />
+        ) : null}
         <FileSearchField
           name="project-files-search"
           ariaLabel={`Search ${projectName} files`}
@@ -373,6 +422,13 @@ export default function FileBrowserPanel({
           }}
         />
       )}
+      <SandboxUploadDialog
+        open={uploadOpen}
+        sandbox={sandboxUpload.sandbox}
+        defaultDirectory={cwd}
+        onOpenChange={setUploadOpen}
+        onUpload={handleUpload}
+      />
     </div>
   );
 }

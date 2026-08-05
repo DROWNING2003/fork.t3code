@@ -1,26 +1,31 @@
 import type { EnvironmentId } from "@t3tools/contracts";
 import type { SandboxCredentials } from "@t3tools/contracts/sandbox";
-import type { SandboxInfo, CodexProviderConfig } from "@t3tools/shared/sandbox";
+import type { SandboxConnectionInfo, SandboxInfo } from "@t3tools/shared/sandbox";
 import {
   createSandboxApi,
   detectCodexProviders,
   DEFAULT_SANDBOX_SKILLS,
+  uploadSandboxFile as sdkUploadSandboxFile,
 } from "@t3tools/sandbox-client";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { startSandboxT3Server, getSandboxPairingUrl } from "../lib/sandbox-client";
 import { connectPairing } from "../connection/onboarding";
 import { useAtomCommand } from "../state/use-atom-command";
 import { getAdditionalInjections } from "../lib/sandboxCredentialStore";
 
 export function useSandboxApi(credentials: SandboxCredentials) {
-  const api = createSandboxApi({
-    apiKey: credentials.e2bApiKey,
-    apiUrl: credentials.e2bApiUrl,
-  });
+  const api = useMemo(
+    () =>
+      createSandboxApi({
+        apiKey: credentials.e2bApiKey,
+        apiUrl: credentials.e2bApiUrl,
+      }),
+    [credentials.e2bApiKey, credentials.e2bApiUrl],
+  );
   const connectPairingEnv = useAtomCommand(connectPairing, { reportFailure: false });
 
   const connect = useCallback(
-    async (sandbox: SandboxInfo): Promise<EnvironmentId> => {
+    async (sandbox: SandboxConnectionInfo): Promise<EnvironmentId> => {
       const additional = getAdditionalInjections();
       const allInjections = [
         ...additional,
@@ -58,7 +63,7 @@ export function useSandboxApi(credentials: SandboxCredentials) {
         sandbox.sandboxID,
         sandbox.domain,
         credentials.sandboxDomain,
-        sandbox as Pick<SandboxInfo, "envdAccessToken" | "trafficAccessToken">,
+        sandbox,
       );
 
       const result = await connectPairingEnv({ pairingUrl });
@@ -70,5 +75,30 @@ export function useSandboxApi(credentials: SandboxCredentials) {
     [api, connectPairingEnv, credentials],
   );
 
-  return { api, connect };
+  const uploadFile = useCallback(
+    async (
+      sandbox: SandboxInfo,
+      destinationPath: string,
+      file: Blob,
+      fileName: string,
+    ): Promise<void> => {
+      await sdkUploadSandboxFile({
+        sandboxID: sandbox.sandboxID,
+        domain: sandbox.domain,
+        fallbackDomain: credentials.sandboxDomain,
+        path: destinationPath,
+        file,
+        fileName,
+        ...(sandbox.envdAccessToken !== undefined
+          ? { envdAccessToken: sandbox.envdAccessToken }
+          : {}),
+        ...(sandbox.trafficAccessToken !== undefined && sandbox.trafficAccessToken !== null
+          ? { trafficAccessToken: sandbox.trafficAccessToken }
+          : {}),
+      });
+    },
+    [credentials],
+  );
+
+  return { api, connect, uploadFile };
 }

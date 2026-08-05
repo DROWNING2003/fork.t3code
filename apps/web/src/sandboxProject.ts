@@ -9,6 +9,13 @@ export function findSandboxProject<
   return projects.find((project) => project.environmentId === environmentId) ?? null;
 }
 
+export function selectProjectsForActiveEnvironment<
+  T extends { readonly environmentId: EnvironmentId },
+>(projects: ReadonlyArray<T>, activeEnvironmentId: EnvironmentId | null): ReadonlyArray<T> {
+  if (activeEnvironmentId === null) return projects;
+  return projects.filter((project) => project.environmentId === activeEnvironmentId);
+}
+
 export function findConnectedSandboxMissingProject<
   T extends {
     readonly environmentId: EnvironmentId;

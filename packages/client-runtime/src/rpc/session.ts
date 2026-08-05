@@ -20,7 +20,9 @@ import {
   ConnectionTransientError as ConnectionTransientErrorClass,
 } from "../connection/model.ts";
 
-const SOCKET_OPEN_TIMEOUT = "15 seconds";
+// Remote sandbox proxies can take longer to accept the first workspace socket
+// while the environment is waking up.
+const SOCKET_OPEN_TIMEOUT = "60 seconds";
 
 export interface RpcSession {
   readonly client: WsRpcProtocolClient;

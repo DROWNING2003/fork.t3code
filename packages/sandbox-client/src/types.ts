@@ -1,5 +1,6 @@
 import type {
   SandboxInfo,
+  SandboxConnectionInfo,
   SandboxCreateInput,
   SandboxInjection,
   OpenaiInjection,
@@ -15,6 +16,7 @@ import type { SandboxCredentials as ContractSandboxCredentials } from "@t3tools/
 
 export type {
   SandboxInfo,
+  SandboxConnectionInfo,
   SandboxCreateInput,
   SandboxInjection,
   OpenaiInjection,

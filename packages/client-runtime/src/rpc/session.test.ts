@@ -370,7 +370,7 @@ describe("RpcSessionFactory", () => {
           const readyFiber = yield* Effect.forkChild(Effect.flip(session.ready));
           yield* awaitSocket(sockets);
 
-          yield* TestClock.adjust("15 seconds");
+          yield* TestClock.adjust("60 seconds");
           return yield* Fiber.join(readyFiber);
         }),
       );

@@ -1,5 +1,9 @@
 import { useCallback } from "react";
-import type { SandboxInfo, CodexProviderConfig, SandboxSkill } from "@t3tools/sandbox-client";
+import type {
+  SandboxConnectionInfo,
+  CodexProviderConfig,
+  SandboxSkill,
+} from "@t3tools/sandbox-client";
 import {
   createSandboxApi,
   startT3Server as sdkStartT3Server,
@@ -59,7 +63,7 @@ export function useSandboxApi(options: UseSandboxApiOptions) {
 
   const startSandboxT3Server = useCallback(
     async (
-      sandbox: SandboxInfo,
+      sandbox: SandboxConnectionInfo,
       fallbackDomain?: string | null,
       codexProviders?: ReadonlyArray<CodexProviderConfig>,
       skills?: ReadonlyArray<SandboxSkill>,
@@ -83,7 +87,7 @@ export function useSandboxApi(options: UseSandboxApiOptions) {
       sandboxID: string,
       domain: string | null | undefined,
       fallbackDomain?: string | null,
-      access?: Pick<SandboxInfo, "envdAccessToken" | "trafficAccessToken">,
+      access?: Pick<SandboxConnectionInfo, "envdAccessToken" | "trafficAccessToken">,
     ): Promise<string> => {
       return getT3PairingUrl(sandboxID, domain, fallbackDomain, access);
     },

@@ -14,9 +14,11 @@ import { newProjectId } from "../lib/utils";
 import {
   buildSandboxProjectCreateInput,
   findConnectedSandboxMissingProject,
+  selectProjectsForActiveEnvironment,
 } from "../sandboxProject";
 import {
   useAllEnvironmentShellsBootstrapped,
+  useActiveEnvironmentId,
   useProjects,
   useThreadShells,
 } from "../state/entities";
@@ -62,6 +64,7 @@ function IndexDraftLanding() {
   const allProjects = useProjects();
   const allThreads = useThreadShells();
   const { environments } = useEnvironments();
+  const activeEnvironmentId = useActiveEnvironmentId();
   const bootstrapped = useAllEnvironmentShellsBootstrapped();
   const handleNewThread = useNewThreadHandler();
   const createProject = useAtomCommand(projectEnvironment.create, { reportFailure: false });
@@ -77,13 +80,12 @@ function IndexDraftLanding() {
       ),
     [environments],
   );
-  const projects = useMemo(
-    () =>
-      isSandboxOnlyWeb
-        ? allProjects.filter((project) => sandboxEnvironmentIds.has(project.environmentId))
-        : allProjects,
-    [allProjects, sandboxEnvironmentIds],
-  );
+  const projects = useMemo(() => {
+    const visibleProjects = isSandboxOnlyWeb
+      ? allProjects.filter((project) => sandboxEnvironmentIds.has(project.environmentId))
+      : allProjects;
+    return selectProjectsForActiveEnvironment(visibleProjects, activeEnvironmentId);
+  }, [activeEnvironmentId, allProjects, sandboxEnvironmentIds]);
   const threads = useMemo(
     () =>
       isSandboxOnlyWeb
@@ -101,7 +103,6 @@ function IndexDraftLanding() {
   );
 
   useEffect(() => {
-    if (!isSandboxOnlyWeb) return;
     const environment = findConnectedSandboxMissingProject(environments, allProjects);
     if (environment === null || creatingSandboxProjectsRef.current.has(environment.environmentId)) {
       return;

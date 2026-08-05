@@ -1,5 +1,6 @@
 export type {
   SandboxInfo,
+  SandboxConnectionInfo,
   SandboxCreateInput,
   SandboxInjection,
   OpenaiInjection,
@@ -44,6 +45,9 @@ export {
   envdProcessStart,
   envdFileRead,
 } from "./envd";
+
+export { uploadSandboxFile, ENVD_FILE_UPLOAD_TIMEOUT_MS } from "./files";
+export type { SandboxFileUploadOptions } from "./files";
 
 export {
   buildT3StartCommand,

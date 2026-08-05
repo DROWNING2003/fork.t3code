@@ -36,8 +36,7 @@ export function envdFileUrl(
   fallbackDomain: string | null | undefined,
   path: string,
 ): string {
-  const resolved = domain ?? fallbackDomain ?? "";
-  const envdUrl = sandboxUrl(sandboxID, resolved, undefined, ENVD_PORT);
+  const envdUrl = sandboxUrl(sandboxID, domain, fallbackDomain, ENVD_PORT);
   if (!envdUrl) throw new Error("The sandbox envd URL could not be resolved.");
   const url = new URL(`${envdUrl}/files`);
   url.searchParams.set("path", path);

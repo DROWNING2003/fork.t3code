@@ -2,6 +2,7 @@ import {
   type CodexProviderConfig,
   type SandboxSkill,
   DEFAULT_T3_PORT,
+  DEFAULT_CODEX_BASE_URL,
   sandboxUrl,
   buildCodexAuthJson,
   buildCodexConfigToml,
@@ -20,8 +21,6 @@ export const PAIRING_FILE_POLL_DELAY_MS = 1_000;
 function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\"'\"'")}'`;
 }
-
-const PLACEHOLDER_KEY = "sandbox-injection-placeholder";
 
 const PROVIDER_PLACEHOLDERS: Record<string, string> = {
   OPENAI_API_KEY: "sk-sandbox-injection-placeholder",
@@ -70,6 +69,10 @@ const AGENT_PLACEHOLDERS: ReadonlyArray<{ readonly path: string; readonly conten
   },
 ];
 
+// zkp-t3 already contains these placeholder files. Keep the old-template
+// fallback available, but do not rewrite the files on every mobile connect.
+const ENABLE_LEGACY_AGENT_PLACEHOLDER_BOOTSTRAP = false;
+
 function buildAgentPlaceholderCommands(): string[] {
   const cmds: string[] = [];
   for (const { path, content } of AGENT_PLACEHOLDERS) {
@@ -116,7 +119,7 @@ export function buildT3StartCommand(
       : [
           {
             name: "OpenAI" as const,
-            baseUrl: "https://api.openai.com",
+            baseUrl: DEFAULT_CODEX_BASE_URL,
             envVar: "OPENAI_API_KEY",
             configKey: "requires_openai_auth" as const,
           },
@@ -139,7 +142,9 @@ export function buildT3StartCommand(
     "fi",
   );
 
-  lines.push(...buildAgentPlaceholderCommands());
+  if (ENABLE_LEGACY_AGENT_PLACEHOLDER_BOOTSTRAP) {
+    lines.push(...buildAgentPlaceholderCommands());
+  }
   for (const v of ALL_API_ENV_VARS) {
     const val = placeholderFor(v);
     lines.push(`export ${v}="\${${v}:-${val}}"`);
@@ -171,8 +176,7 @@ export function buildT3StartCommand(
 }
 
 export async function startT3Server(options: T3StartOptions): Promise<void> {
-  const resolvedDomain = options.domain ?? options.fallbackDomain ?? "";
-  const envdBase = sandboxUrl(options.sandboxID, resolvedDomain, undefined, 49983);
+  const envdBase = sandboxUrl(options.sandboxID, options.domain, options.fallbackDomain, 49983);
   if (!envdBase) throw new Error("The sandbox envd URL could not be resolved.");
 
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -263,8 +267,7 @@ export async function getT3PairingUrl(
   const serverUrl = sandboxUrl(sandboxID, domain, fallbackDomain, DEFAULT_T3_PORT);
   if (!serverUrl) throw new Error("Could not resolve T3 server URL.");
 
-  const resolvedDomain = domain ?? fallbackDomain ?? "";
-  const envdBase = sandboxUrl(sandboxID, resolvedDomain, undefined, 49983);
+  const envdBase = sandboxUrl(sandboxID, domain, fallbackDomain, 49983);
   if (!envdBase) throw new Error("The sandbox envd URL could not be resolved.");
 
   const headers = envdHeaders({ sandboxID, ...access });

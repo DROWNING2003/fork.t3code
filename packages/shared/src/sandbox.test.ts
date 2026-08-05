@@ -1,6 +1,51 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { buildSkillInstallCommands } from "./sandbox.js";
+import {
+  buildCodexAuthJson,
+  buildCodexConfigToml,
+  buildSkillInstallCommands,
+  detectCodexProviders,
+  isSandboxUrl,
+} from "./sandbox.js";
+
+describe("sandbox URLs", () => {
+  it("recognizes sandbox IDs containing hyphens", () => {
+    expect(isSandboxUrl("https://8080-sandbox-1.e2b.example.com")).toBe(true);
+    expect(isSandboxUrl("http://localhost:5733")).toBe(false);
+  });
+});
+
+describe("Codex provider configuration", () => {
+  it("keeps the OpenAI provider name and fills only its base URL", () => {
+    const [provider] = detectCodexProviders([{ base_url: "https://api.fenno.ai" }]);
+
+    expect(provider).toBeDefined();
+    if (!provider) throw new Error("Expected a provider for the Fenno endpoint");
+    expect(provider).toMatchObject({ name: "OpenAI", baseUrl: "https://api.fenno.ai" });
+
+    const config = buildCodexConfigToml([provider]);
+    expect(config).toContain('model_provider = "OpenAI"');
+    expect(config).toContain("[model_providers.OpenAI]");
+    expect(config).not.toContain("model_providers.Fenno");
+    expect(config).toContain('name = "OpenAI"');
+    expect(config).toContain('base_url = "https://api.fenno.ai"');
+
+    const fallbackConfig = buildCodexConfigToml([
+      {
+        name: "",
+        baseUrl: "https://api.fenno.ai",
+        envVar: "OPENAI_API_KEY",
+        configKey: "requires_openai_auth",
+      },
+    ]);
+    expect(fallbackConfig).toContain('model_provider = "OpenAI"');
+    expect(fallbackConfig).toContain('base_url = "https://api.fenno.ai"');
+    expect(fallbackConfig).not.toContain('name = ""');
+    expect(buildCodexAuthJson([provider])).toBe(
+      '{"OPENAI_API_KEY":"sk-sandbox-injection-placeholder"}',
+    );
+  });
+});
 
 describe("buildSkillInstallCommands", () => {
   it("installs skills into OpenCode's global skill directory", () => {

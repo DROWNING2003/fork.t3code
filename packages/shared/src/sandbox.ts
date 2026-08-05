@@ -15,6 +15,14 @@ export interface SandboxInfo {
   metadata?: Record<string, string>;
 }
 
+/** Details returned by the connect endpoint for envd and proxy access. */
+export interface SandboxConnectionInfo {
+  sandboxID: string;
+  domain?: string | null;
+  envdAccessToken?: string;
+  trafficAccessToken?: string | null;
+}
+
 export interface SandboxInjectionBase {
   readonly type: string;
 }
@@ -61,6 +69,8 @@ export interface CodexProviderConfig {
   readonly envVar: string;
   readonly configKey: string;
 }
+
+export const DEFAULT_CODEX_BASE_URL = "https://api.fenno.ai";
 
 const PROVIDER_PATTERNS: ReadonlyArray<{
   readonly hostPattern: RegExp;
@@ -117,11 +127,7 @@ export function detectCodexProviders(
       }
     } else {
       result.push({
-        name: host
-          .split(".")
-          .slice(-2)
-          .join(".")
-          .replace(/^./, (c) => c.toUpperCase()),
+        name: "OpenAI",
         baseUrl: inj.base_url,
         envVar: "OPENAI_API_KEY",
         configKey: "requires_openai_auth",
@@ -131,12 +137,8 @@ export function detectCodexProviders(
   return result;
 }
 
-export function buildCodexAuthJson(providers: ReadonlyArray<CodexProviderConfig>): string {
-  const entries: Record<string, string> = {};
-  for (const p of providers) {
-    entries[p.envVar] = codexReplyPlaceholder(p.envVar);
-  }
-  return JSON.stringify(entries);
+export function buildCodexAuthJson(_providers: ReadonlyArray<CodexProviderConfig>): string {
+  return JSON.stringify({ OPENAI_API_KEY: codexReplyPlaceholder("OPENAI_API_KEY") });
 }
 
 function codexReplyPlaceholder(envVar: string): string {
@@ -153,6 +155,10 @@ function codexReplyPlaceholder(envVar: string): string {
 }
 
 export function buildCodexConfigToml(providers: ReadonlyArray<CodexProviderConfig>): string {
+  const openAiProvider = providers.find(
+    (provider) => provider.envVar === "OPENAI_API_KEY" && provider.baseUrl.trim(),
+  );
+  const baseUrl = openAiProvider?.baseUrl.trim() || DEFAULT_CODEX_BASE_URL;
   const sections = [
     'model_provider = "OpenAI"',
     'model = "gpt-5.4"',
@@ -165,16 +171,14 @@ export function buildCodexConfigToml(providers: ReadonlyArray<CodexProviderConfi
     "model_auto_compact_token_limit = 900000",
     "",
   ];
-  for (const p of providers) {
-    sections.push(
-      `[model_providers.${p.name}]`,
-      `name = ${JSON.stringify(p.name)}`,
-      `base_url = ${JSON.stringify(p.baseUrl)}`,
-      'wire_api = "responses"',
-      `${p.configKey} = true`,
-      "",
-    );
-  }
+  sections.push(
+    "[model_providers.OpenAI]",
+    'name = "OpenAI"',
+    `base_url = ${JSON.stringify(baseUrl)}`,
+    'wire_api = "responses"',
+    "requires_openai_auth = true",
+    "",
+  );
   return sections.join("\n");
 }
 
@@ -285,7 +289,7 @@ export const ENVD_PORT = 49983;
 export function isSandboxUrl(url: string): boolean {
   try {
     const hostname = new URL(url).hostname;
-    return /^\d+-[a-z0-9]+\./.test(hostname);
+    return /^\d+-[a-z0-9-]+\./.test(hostname);
   } catch {
     return false;
   }

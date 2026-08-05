@@ -1,4 +1,8 @@
-import type { SandboxCreateInput, SandboxInfo } from "@t3tools/shared/sandbox";
+import type {
+  SandboxConnectionInfo,
+  SandboxCreateInput,
+  SandboxInfo,
+} from "@t3tools/shared/sandbox";
 import { DEFAULT_SANDBOX_API_URL } from "@t3tools/shared/sandbox";
 import type { SandboxClientOptions } from "./types";
 
@@ -94,8 +98,8 @@ export function createSandboxApi(options: SandboxClientOptions) {
         body: JSON.stringify({ timeout, autoPause: true }),
       }),
 
-    connect: (sandboxID: string, timeout: number): Promise<SandboxInfo> =>
-      request<SandboxInfo>(`/sandboxes/${encodeURIComponent(sandboxID)}/connect`, {
+    connect: (sandboxID: string, timeout: number): Promise<SandboxConnectionInfo> =>
+      request<SandboxConnectionInfo>(`/sandboxes/${encodeURIComponent(sandboxID)}/connect`, {
         method: "POST",
         body: JSON.stringify({ timeout }),
       }),

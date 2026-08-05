@@ -2,7 +2,6 @@ import {
   BOUNDLY_SANDBOX_METADATA,
   type SandboxCreateInput,
   type SandboxInjection,
-  type SandboxInfo,
 } from "@t3tools/shared/sandbox";
 import { LoaderIcon } from "lucide-react";
 import { useState } from "react";
@@ -10,6 +9,7 @@ import { useState } from "react";
 import { useSandboxCredentials } from "../../hooks/useSandboxCredentials";
 import { useSandboxApi } from "../../hooks/useSandboxApi";
 import { getAdditionalInjections } from "../../lib/sandboxCredentialStore";
+import { setActiveEnvironmentId } from "../../state/entities";
 import { Button } from "../ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardPanel, CardFooter } from "../ui/card";
 import { Input } from "../ui/input";
@@ -66,7 +66,8 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
       }
       const sandbox = await api.create(input);
       const connected = await api.connect(sandbox.sandboxID, 3600);
-      await connect(connected as SandboxInfo);
+      const environmentId = await connect(connected);
+      setActiveEnvironmentId(environmentId);
       onSuccess();
     } catch {
       setStatus("error");

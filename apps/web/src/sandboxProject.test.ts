@@ -5,6 +5,7 @@ import {
   buildSandboxProjectCreateInput,
   findSandboxProject,
   findConnectedSandboxMissingProject,
+  selectProjectsForActiveEnvironment,
   SANDBOX_PROJECT_WORKSPACE_ROOT,
 } from "./sandboxProject";
 
@@ -64,5 +65,23 @@ describe("sandbox projects", () => {
         [],
       )?.environmentId,
     ).toBe(environmentId);
+  });
+
+  it("keeps the landing draft in the selected environment", () => {
+    const localEnvironmentId = EnvironmentId.make("local-environment");
+    const sandboxEnvironmentId = EnvironmentId.make("sandbox-environment");
+    const localProject = { environmentId: localEnvironmentId, id: ProjectId.make("local") };
+    const sandboxProject = {
+      environmentId: sandboxEnvironmentId,
+      id: ProjectId.make("sandbox"),
+    };
+
+    expect(
+      selectProjectsForActiveEnvironment([localProject, sandboxProject], sandboxEnvironmentId),
+    ).toEqual([sandboxProject]);
+    expect(selectProjectsForActiveEnvironment([localProject, sandboxProject], null)).toEqual([
+      localProject,
+      sandboxProject,
+    ]);
   });
 });

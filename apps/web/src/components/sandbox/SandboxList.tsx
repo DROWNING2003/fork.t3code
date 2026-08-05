@@ -17,6 +17,7 @@ import { BOUNDLY_SANDBOX_METADATA } from "@t3tools/shared/sandbox";
 import { environmentCatalog } from "../../connection/catalog";
 import { useSandboxCredentials } from "../../hooks/useSandboxCredentials";
 import { useSandboxApi } from "../../hooks/useSandboxApi";
+import { setActiveEnvironmentId } from "../../state/entities";
 import { useAtomCommand } from "../../state/use-atom-command";
 import { Button } from "../ui/button";
 import {
@@ -117,7 +118,8 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
       setPendingAction({ sandboxID: sandbox.sandboxID, action: "connect" });
       try {
         const connected = await api.connect(sandbox.sandboxID, 3600);
-        await connect(connected as SandboxInfo);
+        const environmentId = await connect(connected);
+        setActiveEnvironmentId(environmentId);
         void navigate({ to: "/" });
       } catch {
         toastManager.add(
@@ -217,7 +219,7 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
             <Settings2Icon className="size-4.5" />
           </EmptyMedia>
           <EmptyTitle>凭证未配置</EmptyTitle>
-          <EmptyDescription>需要配置 E2B API 密钥才能使用沙箱</EmptyDescription>
+          <EmptyDescription>需要配置沙箱 API 密钥才能使用沙箱</EmptyDescription>
         </EmptyHeader>
         <EmptyContent>
           <Button
