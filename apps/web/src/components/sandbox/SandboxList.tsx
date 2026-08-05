@@ -29,6 +29,7 @@ import {
   EmptyMedia,
 } from "../ui/empty";
 import { SandboxCard, type SandboxAction } from "./SandboxCard";
+import { sandboxIdFromUrl } from "./sandboxEnvironmentSync";
 import { Toggle, ToggleGroup } from "../ui/toggle-group";
 import { stackedThreadToast, toastManager } from "../ui/toast";
 import {
@@ -40,17 +41,6 @@ import {
   AlertDialogPopup,
   AlertDialogTitle,
 } from "../ui/alert-dialog";
-
-const SANDBOX_ID_REGEX = /^(?:\d+)-([a-z0-9]+)\./i;
-
-function sandboxIdFromUrl(url: string): string | null {
-  try {
-    const match = SANDBOX_ID_REGEX.exec(new URL(url).hostname);
-    return match?.[1] ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function getHttpBaseUrl(entry: { readonly profile: Option.Option<unknown> }): string | null {
   if (!Option.isSome(entry.profile)) return null;

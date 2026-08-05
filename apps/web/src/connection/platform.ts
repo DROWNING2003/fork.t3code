@@ -57,7 +57,7 @@ import {
   readDesktopSecondaryBootstrapsResult,
   type DesktopSecondaryBootstrapsRead,
 } from "./desktopLocal";
-import { shouldProbeCurrentSandboxEnvironment } from "./sandboxPrimaryGate";
+import { sandboxIdFromHostname, shouldProbeCurrentSandboxEnvironment } from "./sandboxPrimaryGate";
 import { connectionStorageLayer } from "./storage";
 
 let nextObservedRpcRequestId = 0;
@@ -362,10 +362,14 @@ const loadSecondaryConnectionRegistration = Effect.fn(
 // the bridge, so the renderer polls; successful registrations are cached by a
 // signature of their endpoint + token until bearer credentials approach expiry.
 const PLATFORM_POLL_INTERVAL = "3 seconds";
+const SANDBOX_PLATFORM_POLL_INTERVAL = "30 seconds";
 const SECONDARY_BEARER_REFRESH_SKEW_MS = 5_000;
 
-export function platformTopologyRefreshMode(hasDesktopBridge: boolean): "poll" | "once" {
-  return hasDesktopBridge ? "poll" : "once";
+export function platformTopologyRefreshMode(
+  hasDesktopBridge: boolean,
+  isSandboxHost = false,
+): "poll" | "once" {
+  return hasDesktopBridge || isSandboxHost ? "poll" : "once";
 }
 
 export function secondaryBearerExpiresAtEpochMs(
@@ -590,13 +594,17 @@ const platformConnectionSourceLayer = Layer.effect(
       return registrations as ReadonlyArray<PlatformConnectionRegistration>;
     }).pipe(Effect.provide(FetchHttpClient.layer));
 
-    // Browser targets are fixed for the page lifetime; only Electron can report changing topology.
-    const refreshMode = platformTopologyRefreshMode(window.desktopBridge !== undefined);
+    // Browser targets are fixed for the page lifetime, except sandbox hosts whose
+    // lifecycle can change while the workspace remains open.
+    const isSandboxHost = sandboxIdFromHostname(window.location.hostname) !== null;
+    const hasDesktopBridge = window.desktopBridge !== undefined;
+    const refreshMode = platformTopologyRefreshMode(hasDesktopBridge, isSandboxHost);
+    const refreshInterval = hasDesktopBridge
+      ? PLATFORM_POLL_INTERVAL
+      : SANDBOX_PLATFORM_POLL_INTERVAL;
     const registrations =
       refreshMode === "poll"
-        ? Stream.tick(PLATFORM_POLL_INTERVAL).pipe(
-            Stream.mapEffect(() => buildPlatformRegistrations),
-          )
+        ? Stream.tick(refreshInterval).pipe(Stream.mapEffect(() => buildPlatformRegistrations))
         : Stream.fromEffect(buildPlatformRegistrations);
 
     return PlatformConnectionSource.of({ registrations });

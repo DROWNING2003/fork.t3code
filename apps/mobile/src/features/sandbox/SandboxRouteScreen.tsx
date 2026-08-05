@@ -215,7 +215,7 @@ export function SandboxRouteScreen() {
           <EmptyState
             variant="card"
             title="Credentials Required"
-            detail="Set your E2B API key and OpenAI key in Settings to manage sandboxes."
+            detail="Set your Sandbox API key and OpenAI key in Settings to manage sandboxes."
             actionLabel="Open Settings"
             onAction={() => navigation.navigate("SettingsSheet")}
           />

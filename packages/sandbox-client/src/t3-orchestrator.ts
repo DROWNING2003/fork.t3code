@@ -151,7 +151,20 @@ export function buildT3StartCommand(
   }
 
   lines.push(
-    "RUNNING_PID=\"$(pgrep -f '^node .*bin\\.mjs serve --port 8080' | head -n 1 || true)\"",
+    // The minimal sandbox template does not necessarily include procps/pgrep.
+    // Inspect /proc instead so reconnects can still replace a server started by
+    // the image entrypoint rather than silently starting a second copy.
+    'RUNNING_PID=""',
+    "for PROC_DIR in /proc/[0-9]*; do",
+    '  PID="${PROC_DIR##*/}"',
+    '  [ "$PID" = "$$" ] && continue',
+    '  if [ -r "$PROC_DIR/cmdline" ]; then',
+    "    CMDLINE=\"$(tr '\\0' ' ' < \"$PROC_DIR/cmdline\" 2>/dev/null || true)\"",
+    '    case "$CMDLINE" in',
+    '      *"/home/user/t3-server/bin.mjs serve --port 8080"*) RUNNING_PID="$PID"; break ;;',
+    "    esac",
+    "  fi",
+    "done",
     'if [ -n "$RUNNING_PID" ]; then',
     "  if [ \"$CODEX_RUNTIME_CHANGED\" = 0 ] && ! grep -qx 'Token: t3code-dev' /home/user/.t3/startup.log 2>/dev/null; then exit 0; fi",
     '  kill "$RUNNING_PID"',

@@ -226,8 +226,9 @@ describe("primary topology cache", () => {
 });
 
 describe("platform topology refresh", () => {
-  it("polls only when the desktop bridge can report topology changes", () => {
+  it("polls when desktop or sandbox topology can change", () => {
     expect(platformTopologyRefreshMode(true)).toBe("poll");
     expect(platformTopologyRefreshMode(false)).toBe("once");
+    expect(platformTopologyRefreshMode(false, true)).toBe("poll");
   });
 });

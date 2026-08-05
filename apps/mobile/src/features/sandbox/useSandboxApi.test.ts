@@ -59,7 +59,7 @@ describe("resolveSandboxApiUrl", () => {
     });
   });
 
-  it("uses the configured E2B API URL and removes its trailing slash", () => {
+  it("uses the configured Sandbox API URL and removes its trailing slash", () => {
     expect(resolveSandboxApiUrl("http://10.210.10.32:5003/")).toBe("http://10.210.10.32:5003");
   });
 
@@ -106,7 +106,10 @@ describe("resolveSandboxApiUrl", () => {
     expect(body.process.args[1]).toContain(
       "node /home/user/t3-server/bin.mjs serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web",
     );
-    expect(body.process.args[1]).toContain("pgrep -f '^node .*bin\\.mjs serve --port 8080'");
+    expect(body.process.args[1]).toContain("for PROC_DIR in /proc/[0-9]*; do");
+    expect(body.process.args[1]).toContain(
+      '*"/home/user/t3-server/bin.mjs serve --port 8080"*) RUNNING_PID="$PID"; break ;;',
+    );
     expect(body.process.args[1]).toContain(
       'while kill -0 "$RUNNING_PID" 2>/dev/null && [ "$WAIT_ATTEMPTS" -lt 50 ]; do',
     );
@@ -131,6 +134,7 @@ describe("resolveSandboxApiUrl", () => {
     );
     expect(body.process.args[1]).toContain('base_url = "https://api.fenno.ai"');
     expect(body.process.args[1]).toContain("> /home/user/.t3/startup.log 2>&1");
+    expect(body.process.args[1]).not.toContain("/home/user/.opencode/config.json");
     expect(body.stdin).toBe(false);
   });
 

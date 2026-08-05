@@ -201,15 +201,15 @@ function SandboxCredentialsSettings() {
             <ServerCogIcon className="size-4 text-muted-foreground" />
             <div>
               <h2 className="text-sm font-semibold">运行环境</h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">E2B 服务与模板</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">沙箱服务与模板</p>
             </div>
           </div>
-          <span className="font-mono text-[11px] text-muted-foreground">E2B</span>
+          <span className="font-mono text-[11px] text-muted-foreground">Sandbox</span>
         </div>
         <div className="grid gap-x-6 gap-y-5 p-4 sm:grid-cols-2 sm:p-5">
           <div className="space-y-2 sm:col-span-2">
             <label className="text-sm font-medium" htmlFor="e2b-api-key">
-              E2B API Key
+              Sandbox API Key
               <span className="text-destructive" aria-hidden="true">
                 *
               </span>
@@ -230,7 +230,7 @@ function SandboxCredentialsSettings() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="e2b-api-url">
-              E2B API URL
+              Sandbox API URL
             </label>
             <Input
               id="e2b-api-url"
