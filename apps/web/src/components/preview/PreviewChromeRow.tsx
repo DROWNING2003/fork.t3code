@@ -23,6 +23,7 @@ import { cn } from "~/lib/utils";
 
 interface Props {
   url: string;
+  /** Optional full URL shown in the unfocused address bar when `url` is abbreviated. */
   displayUrl?: string | undefined;
   loading: boolean;
   loadProgress: number;

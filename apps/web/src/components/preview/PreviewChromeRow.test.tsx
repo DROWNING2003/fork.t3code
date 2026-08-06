@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { PreviewChromeRow } from "./PreviewChromeRow";
 
@@ -26,5 +26,24 @@ describe("PreviewChromeRow", () => {
     expect(markup.indexOf('aria-label="Open in system browser"')).toBeGreaterThan(
       markup.indexOf('aria-label="Refresh"'),
     );
+  });
+
+  it("shows the complete URL while the address bar is not focused", () => {
+    const markup = renderToStaticMarkup(
+      <PreviewChromeRow
+        url="https://example.com/dashboard?mode=edit&tab=1#notes"
+        loading={false}
+        loadProgress={0}
+        canGoBack={false}
+        canGoForward={false}
+        refreshDisabled={false}
+        onBack={vi.fn()}
+        onForward={vi.fn()}
+        onRefresh={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(markup).toContain('value="https://example.com/dashboard?mode=edit&amp;tab=1#notes"');
   });
 });

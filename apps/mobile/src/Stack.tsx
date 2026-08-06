@@ -47,6 +47,7 @@ import { SettingsClientStorageRouteScreen } from "./features/settings/SettingsCl
 import { SettingsAuthRouteScreen } from "./features/settings/SettingsAuthRouteScreen";
 import { SettingsEnvironmentsRouteScreen } from "./features/settings/SettingsEnvironmentsRouteScreen";
 import { SettingsLegalRouteScreen } from "./features/settings/SettingsLegalRouteScreen";
+import { SettingsProjectGroupingRouteScreen } from "./features/settings/SettingsProjectGroupingRouteScreen";
 import { SettingsRouteScreen } from "./features/settings/SettingsRouteScreen";
 import { SandboxRouteScreen } from "./features/sandbox/SandboxRouteScreen";
 import { SandboxNewSheet } from "./features/sandbox/SandboxNewSheet";
@@ -176,6 +177,13 @@ const SettingsSheetStack = createNativeStackNavigator({
       linking: "appearance",
       options: {
         title: "Appearance",
+      },
+    }),
+    SettingsProjectGrouping: createNativeStackScreen({
+      screen: SettingsProjectGroupingRouteScreen,
+      linking: "project-grouping",
+      options: {
+        title: "Project Grouping",
       },
     }),
     SettingsClientStorage: createNativeStackScreen({
