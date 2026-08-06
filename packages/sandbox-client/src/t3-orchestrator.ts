@@ -128,9 +128,14 @@ export function buildT3StartCommand(
   lines.push(
     `printf '%s\\n' ${shellQuote(authJson)} > ${CODEX_AUTH_PATH}.tmp`,
     `chmod 600 ${CODEX_AUTH_PATH}.tmp`,
-    `mv ${CODEX_AUTH_PATH}.tmp ${CODEX_AUTH_PATH}`,
+    `if ! cmp -s ${CODEX_AUTH_PATH}.tmp ${CODEX_AUTH_PATH}; then`,
+    `  mv ${CODEX_AUTH_PATH}.tmp ${CODEX_AUTH_PATH}`,
+    `  chmod 600 ${CODEX_AUTH_PATH}`,
+    "  CODEX_RUNTIME_CHANGED=1",
+    "else",
+    `  rm -f ${CODEX_AUTH_PATH}.tmp`,
+    "fi",
     `chmod 600 ${CODEX_AUTH_PATH}`,
-    "CODEX_RUNTIME_CHANGED=1",
     `printf '%s' ${shellQuote(configToml)} > ${CODEX_CONFIG_PATH}.tmp`,
     `chmod 600 ${CODEX_CONFIG_PATH}.tmp`,
     `if ! cmp -s ${CODEX_CONFIG_PATH}.tmp ${CODEX_CONFIG_PATH}; then`,
@@ -235,7 +240,7 @@ export async function waitForT3Server(
     } catch {}
     if (i + 1 < retries) await wait(retryDelay);
   }
-  throw new Error(`T3 Server did not become ready at ${serverUrl}`);
+  throw new Error(`The sandbox service did not become ready at ${serverUrl}`);
 }
 
 export function buildT3PairingCommand(serverUrl: string): string {
@@ -278,7 +283,7 @@ export async function getT3PairingUrl(
   },
 ): Promise<string> {
   const serverUrl = sandboxUrl(sandboxID, domain, fallbackDomain, DEFAULT_T3_PORT);
-  if (!serverUrl) throw new Error("Could not resolve T3 server URL.");
+  if (!serverUrl) throw new Error("Could not resolve the sandbox service URL.");
 
   const envdBase = sandboxUrl(sandboxID, domain, fallbackDomain, 49983);
   if (!envdBase) throw new Error("The sandbox envd URL could not be resolved.");
@@ -306,5 +311,5 @@ export async function getT3PairingUrl(
       if (url) return url;
     }
   }
-  throw new Error(`T3 Server did not issue a fresh pairing code at ${serverUrl}.`);
+  throw new Error(`The sandbox service did not issue a fresh pairing code at ${serverUrl}.`);
 }

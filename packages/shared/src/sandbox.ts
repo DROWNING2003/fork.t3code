@@ -286,13 +286,18 @@ export const DEFAULT_TIMEOUT_HOURS = 3;
 export const DEFAULT_T3_PORT = 8080;
 export const ENVD_PORT = 49983;
 
-export function isSandboxUrl(url: string): boolean {
+const SANDBOX_HOSTNAME_PATTERN = /^\d+-([a-z0-9-]+)\./i;
+
+export function sandboxIdFromUrl(url: string): string | null {
   try {
-    const hostname = new URL(url).hostname;
-    return /^\d+-[a-z0-9-]+\./.test(hostname);
+    return SANDBOX_HOSTNAME_PATTERN.exec(new URL(url).hostname)?.[1] ?? null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function isSandboxUrl(url: string): boolean {
+  return sandboxIdFromUrl(url) !== null;
 }
 
 export function sandboxUrl(

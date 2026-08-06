@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type {
   SandboxConnectionInfo,
   CodexProviderConfig,
@@ -59,7 +59,10 @@ interface UseSandboxApiOptions {
 }
 
 export function useSandboxApi(options: UseSandboxApiOptions) {
-  const api = createSandboxApi({ apiKey: options.apiKey, apiUrl: options.apiUrl });
+  const api = useMemo(
+    () => createSandboxApi({ apiKey: options.apiKey, apiUrl: options.apiUrl }),
+    [options.apiKey, options.apiUrl],
+  );
 
   const startSandboxT3Server = useCallback(
     async (

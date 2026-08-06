@@ -19,7 +19,7 @@ import {
 } from "../../state/use-remote-environment-registry";
 import { environmentCatalog } from "../../connection/catalog";
 import { useAtomCommand } from "../../state/use-atom-command";
-import { isSandboxUrl } from "@t3tools/shared/sandbox";
+import { sandboxIdFromUrl } from "@t3tools/shared/sandbox";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/unstable/reactivity";
 import { cn } from "../../lib/cn";
@@ -75,8 +75,8 @@ export function SandboxRouteScreen() {
       const apiIds = new Set(list.map((s) => s.sandboxID));
       for (const conn of Object.values(savedConnectionsById)) {
         const url = conn.displayUrl || conn.httpBaseUrl || "";
-        if (!url || !isSandboxUrl(url)) continue;
-        const id = url.match(/\d+-([a-z0-9]+)\./)?.[1];
+        if (!url) continue;
+        const id = sandboxIdFromUrl(url);
         if (id && !apiIds.has(id)) await removeEnv(conn.environmentId);
       }
     } catch {}
@@ -162,7 +162,12 @@ export function SandboxRouteScreen() {
       try {
         const connectedSandbox = await connectSandbox(sandboxID, 3600);
         const additional = await getAdditionalInjections();
-        const providers = detectCodexProviders(additional.map((i) => ({ base_url: i.base_url })));
+        const providers = detectCodexProviders([
+          ...(credentials.openaiApiKey && credentials.openaiBaseUrl
+            ? [{ base_url: credentials.openaiBaseUrl }]
+            : []),
+          ...additional.map((i) => ({ base_url: i.base_url })),
+        ]);
         await startSandboxT3Server(
           connectedSandbox,
           credentials.sandboxDomain,
@@ -195,6 +200,8 @@ export function SandboxRouteScreen() {
     },
     [
       connectSandbox,
+      credentials.openaiApiKey,
+      credentials.openaiBaseUrl,
       credentials.sandboxDomain,
       getPairingUrl,
       navigation,

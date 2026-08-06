@@ -41,6 +41,8 @@ export function SandboxNewSheet() {
   const [githubToken, setGithubToken] = useState("");
   const [mountPath, setMountPath] = useState("");
   const [name, setName] = useState("");
+  const [createdSandboxID, setCreatedSandboxID] = useState<string | null>(null);
+  const [createdSandboxDomain, setCreatedSandboxDomain] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,23 +88,29 @@ export function SandboxNewSheet() {
           ]
         : undefined;
 
-      const sandbox = await api.createSandbox({
-        templateID,
-        timeout: hours * 3600,
-        autoPause: true,
-        network: { allowPublicTraffic: true },
-        envVars,
-        ...(merged ? { injections: merged } : {}),
-        metadata: {
-          ...BOUNDLY_SANDBOX_METADATA,
-          ...(name.trim() ? { name: name.trim() } : {}),
-        },
-        resources,
-      });
+      let sandboxID = createdSandboxID;
+      if (sandboxID === null) {
+        const sandbox = await api.createSandbox({
+          templateID,
+          timeout: hours * 3600,
+          autoPause: true,
+          network: { allowPublicTraffic: true },
+          envVars,
+          ...(merged ? { injections: merged } : {}),
+          metadata: {
+            ...BOUNDLY_SANDBOX_METADATA,
+            ...(name.trim() ? { name: name.trim() } : {}),
+          },
+          resources,
+        });
+        sandboxID = sandbox.sandboxID;
+        setCreatedSandboxID(sandboxID);
+        setCreatedSandboxDomain(sandbox.domain ?? null);
+      }
 
-      // Wait for T3 Server to boot and get pairing URL
-      setError("Waiting for T3 Server to start...");
-      const connectedSandbox = await api.connectSandbox(sandbox.sandboxID, hours * 3600);
+      // Wait for the sandbox service to boot and get a pairing URL.
+      setError("Waiting for the sandbox to start...");
+      const connectedSandbox = await api.connectSandbox(sandboxID, hours * 3600);
       const providers = detectCodexProviders(
         (merged ?? []).flatMap((i) => {
           const url = (i as { base_url?: string }).base_url;
@@ -117,7 +125,7 @@ export function SandboxNewSheet() {
       );
       const pairingUrl = await api.getPairingUrl(
         connectedSandbox.sandboxID,
-        connectedSandbox.domain ?? sandbox.domain,
+        connectedSandbox.domain ?? createdSandboxDomain,
         credentials.sandboxDomain,
         connectedSandbox,
       );
@@ -137,7 +145,15 @@ export function SandboxNewSheet() {
     } finally {
       setCreating(false);
     }
-  }, [timeoutHours, githubRepo, credentials, api, navigation]);
+  }, [
+    timeoutHours,
+    githubRepo,
+    credentials,
+    api,
+    navigation,
+    createdSandboxID,
+    createdSandboxDomain,
+  ]);
 
   return (
     <View collapsable={false} className="flex-1 bg-sheet">
@@ -234,7 +250,15 @@ export function SandboxNewSheet() {
 
             <ConnectionSheetButton
               icon="plus"
-              label={creating ? "Creating..." : "Create Sandbox"}
+              label={
+                creating
+                  ? createdSandboxID
+                    ? "Connecting..."
+                    : "Creating..."
+                  : createdSandboxID
+                    ? "Retry Connection"
+                    : "Create Sandbox"
+              }
               tone="primary"
               disabled={creating}
               onPress={() => void handleCreate()}

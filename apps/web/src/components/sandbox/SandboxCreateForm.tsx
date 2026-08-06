@@ -27,6 +27,7 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
   const [githubToken, setGithubToken] = useState("");
   const [mountPath, setMountPath] = useState("");
   const [name, setName] = useState("");
+  const [createdSandboxID, setCreatedSandboxID] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "creating" | "error">("idle");
 
   const handleCreate = async () => {
@@ -34,38 +35,45 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
     setStatus("creating");
     try {
       const hours = Math.max(1, parseInt(timeoutHours, 10) || 3);
-      const injections: SandboxInjection[] = [];
-      if (creds.credentials.openaiApiKey) {
-        injections.push({
-          type: "openai",
-          api_key: creds.credentials.openaiApiKey,
-          ...(creds.credentials.openaiBaseUrl ? { base_url: creds.credentials.openaiBaseUrl } : {}),
-        } as SandboxInjection);
-      }
-      for (const inj of getAdditionalInjections()) injections.push(inj);
-      const input: SandboxCreateInput = {
-        templateID: creds.credentials.templateID,
-        timeout: hours * 3600,
-        autoPause: true,
-        network: { allowPublicTraffic: true },
-        metadata: {
-          ...BOUNDLY_SANDBOX_METADATA,
-          ...(name.trim() ? { name: name.trim() } : {}),
-        },
-        ...(injections.length > 0 ? { injections } : {}),
-      };
-      if (githubRepo.trim()) {
-        input.resources = [
-          {
-            type: "github_repository",
-            url: `https://github.com/${githubRepo.trim()}`,
-            mount_path: mountPath.trim() || "/home/user/project",
-            authorization_token: githubToken.trim() || "",
+      let sandboxID = createdSandboxID;
+      if (sandboxID === null) {
+        const injections: SandboxInjection[] = [];
+        if (creds.credentials.openaiApiKey) {
+          injections.push({
+            type: "openai",
+            api_key: creds.credentials.openaiApiKey,
+            ...(creds.credentials.openaiBaseUrl
+              ? { base_url: creds.credentials.openaiBaseUrl }
+              : {}),
+          } as SandboxInjection);
+        }
+        for (const inj of getAdditionalInjections()) injections.push(inj);
+        const input: SandboxCreateInput = {
+          templateID: creds.credentials.templateID,
+          timeout: hours * 3600,
+          autoPause: true,
+          network: { allowPublicTraffic: true },
+          metadata: {
+            ...BOUNDLY_SANDBOX_METADATA,
+            ...(name.trim() ? { name: name.trim() } : {}),
           },
-        ];
+          ...(injections.length > 0 ? { injections } : {}),
+        };
+        if (githubRepo.trim()) {
+          input.resources = [
+            {
+              type: "github_repository",
+              url: `https://github.com/${githubRepo.trim()}`,
+              mount_path: mountPath.trim() || "/home/user/project",
+              authorization_token: githubToken.trim() || "",
+            },
+          ];
+        }
+        const sandbox = await api.create(input);
+        sandboxID = sandbox.sandboxID;
+        setCreatedSandboxID(sandboxID);
       }
-      const sandbox = await api.create(input);
-      const connected = await api.connect(sandbox.sandboxID, 3600);
+      const connected = await api.connect(sandboxID, 3600);
       const environmentId = await connect(connected);
       setActiveEnvironmentId(environmentId);
       onSuccess();
@@ -155,10 +163,12 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
           {status === "creating" ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <LoaderIcon className="size-4 animate-spin" />
-              正在创建并启动 T3 Server...
+              {createdSandboxID ? "正在连接沙箱..." : "正在创建并启动沙箱..."}
             </div>
           ) : status === "error" ? (
-            <p className="text-sm text-destructive">创建失败，请重试</p>
+            <p className="text-sm text-destructive">
+              {createdSandboxID ? "连接失败，可重试连接" : "创建失败，请重试"}
+            </p>
           ) : null}
           <div className="ml-auto flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onCancel} disabled={status === "creating"}>
@@ -169,7 +179,7 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
               onClick={handleCreate}
               disabled={status === "creating" || !creds.hasRequired}
             >
-              创建
+              {createdSandboxID ? "重试连接" : "创建"}
             </Button>
           </div>
         </CardFooter>

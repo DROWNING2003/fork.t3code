@@ -13,7 +13,11 @@ import {
   setAdditionalInjections,
 } from "./useSandboxCredentials";
 import type { HttpInjection } from "@t3tools/sandbox-client";
-import { DEFAULT_OPENAI_BASE_URL, DEFAULT_TEMPLATE_ID } from "./sandboxTypes";
+import {
+  DEFAULT_OPENAI_BASE_URL,
+  DEFAULT_TEMPLATE_ID,
+  mergeSandboxCredentials,
+} from "./sandboxTypes";
 import { DEFAULT_SANDBOX_API_URL } from "./useSandboxApi";
 
 const BASE_URL_PRESETS = [
@@ -81,6 +85,11 @@ export function SettingsSandboxCredentials() {
 
   const [e2bKey, setE2bKey] = useState(credentials.e2bApiKey ?? "");
   const [e2bApiUrl, setE2bApiUrl] = useState(credentials.e2bApiUrl ?? "");
+  const [sandboxDomain, setSandboxDomain] = useState(credentials.sandboxDomain ?? "");
+  const [openaiApiKey, setOpenaiApiKey] = useState(credentials.openaiApiKey ?? "");
+  const [openaiBaseUrl, setOpenaiBaseUrl] = useState(
+    credentials.openaiBaseUrl || DEFAULT_OPENAI_BASE_URL,
+  );
   const [templateID, setTemplateID] = useState(credentials.templateID || DEFAULT_TEMPLATE_ID);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [saving, setSaving] = useState(false);
@@ -91,6 +100,9 @@ export function SettingsSandboxCredentials() {
     initialized.current = true;
     setE2bKey(credentials.e2bApiKey ?? "");
     setE2bApiUrl(credentials.e2bApiUrl ?? "");
+    setSandboxDomain(credentials.sandboxDomain ?? "");
+    setOpenaiApiKey(credentials.openaiApiKey ?? "");
+    setOpenaiBaseUrl(credentials.openaiBaseUrl || DEFAULT_OPENAI_BASE_URL);
     setTemplateID(credentials.templateID || DEFAULT_TEMPLATE_ID);
     getAdditionalInjections().then((inj) => {
       const loaded = loadEntries(inj);
@@ -130,14 +142,16 @@ export function SettingsSandboxCredentials() {
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      await saveCredentials({
-        e2bApiKey: e2bKey.trim(),
-        e2bApiUrl: e2bApiUrl.trim(),
-        sandboxDomain: "",
-        openaiApiKey: "",
-        openaiBaseUrl: DEFAULT_OPENAI_BASE_URL,
-        templateID: templateID.trim() || DEFAULT_TEMPLATE_ID,
-      });
+      await saveCredentials(
+        mergeSandboxCredentials(credentials, {
+          e2bApiKey: e2bKey.trim(),
+          e2bApiUrl: e2bApiUrl.trim(),
+          sandboxDomain: sandboxDomain.trim(),
+          openaiApiKey: openaiApiKey.trim(),
+          openaiBaseUrl: openaiBaseUrl.trim(),
+          templateID: templateID.trim() || DEFAULT_TEMPLATE_ID,
+        }),
+      );
       await setAdditionalInjections(saveEntries(entries));
       if (navigation.canGoBack()) navigation.goBack();
     } catch (error) {
@@ -148,7 +162,18 @@ export function SettingsSandboxCredentials() {
     } finally {
       setSaving(false);
     }
-  }, [e2bKey, e2bApiUrl, templateID, entries, saveCredentials, navigation]);
+  }, [
+    e2bKey,
+    e2bApiUrl,
+    sandboxDomain,
+    openaiApiKey,
+    openaiBaseUrl,
+    templateID,
+    entries,
+    saveCredentials,
+    navigation,
+    credentials,
+  ]);
 
   return (
     <View collapsable={false} className="flex-1 bg-sheet">
@@ -208,6 +233,48 @@ export function SettingsSandboxCredentials() {
                 placeholder={DEFAULT_TEMPLATE_ID}
                 value={templateID}
                 onChangeText={setTemplateID}
+                className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+              />
+            </View>
+            <View collapsable={false} className="gap-1.5">
+              <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                Public Sandbox Domain
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="sandbox.example.com"
+                value={sandboxDomain}
+                onChangeText={setSandboxDomain}
+                className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+              />
+            </View>
+            <View collapsable={false} className="gap-1.5">
+              <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                OpenAI API Key
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                placeholder="sk-..."
+                value={openaiApiKey}
+                onChangeText={setOpenaiApiKey}
+                className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
+              />
+            </View>
+            <View collapsable={false} className="gap-1.5">
+              <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
+                OpenAI-Compatible Base URL
+              </Text>
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder={DEFAULT_OPENAI_BASE_URL}
+                value={openaiBaseUrl}
+                onChangeText={setOpenaiBaseUrl}
                 className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
               />
             </View>

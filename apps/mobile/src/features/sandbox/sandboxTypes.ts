@@ -33,6 +33,22 @@ export const DEFAULT_OPENAI_BASE_URL = "https://api.fenno.ai";
 export const DEFAULT_TIMEOUT_HOURS = 3;
 export const DEFAULT_T3_PORT = 8080;
 
+export function mergeSandboxCredentials(
+  current: Partial<SandboxCredentials>,
+  updates: Pick<SandboxCredentials, "e2bApiKey" | "e2bApiUrl" | "templateID"> &
+    Partial<Pick<SandboxCredentials, "sandboxDomain" | "openaiApiKey" | "openaiBaseUrl">>,
+): SandboxCredentials {
+  return {
+    ...updates,
+    sandboxDomain: updates.sandboxDomain ?? current.sandboxDomain ?? "",
+    openaiApiKey: updates.openaiApiKey ?? current.openaiApiKey ?? "",
+    openaiBaseUrl:
+      updates.openaiBaseUrl !== undefined
+        ? updates.openaiBaseUrl || DEFAULT_OPENAI_BASE_URL
+        : current.openaiBaseUrl || DEFAULT_OPENAI_BASE_URL,
+  };
+}
+
 export function isSandboxConnecting(
   sandboxID: string,
   connectingSandboxID: string | null,

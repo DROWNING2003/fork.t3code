@@ -6,12 +6,20 @@ import {
   buildSkillInstallCommands,
   detectCodexProviders,
   isSandboxUrl,
+  sandboxIdFromUrl,
 } from "./sandbox.js";
 
 describe("sandbox URLs", () => {
   it("recognizes sandbox IDs containing hyphens", () => {
     expect(isSandboxUrl("https://8080-sandbox-1.e2b.example.com")).toBe(true);
     expect(isSandboxUrl("http://localhost:5733")).toBe(false);
+  });
+
+  it("extracts sandbox IDs containing hyphens from proxied URLs", () => {
+    expect(
+      sandboxIdFromUrl("https://8080-sbx-abc-123.e2b.example.com/.well-known/t3/environment"),
+    ).toBe("sbx-abc-123");
+    expect(sandboxIdFromUrl("http://localhost:5733")).toBeNull();
   });
 });
 

@@ -103,6 +103,16 @@ describe("resolveSandboxApiUrl", () => {
       "-lc",
       expect.stringContaining("unset T3CODE_PAIRING_TOKEN"),
     ]);
+    const command = body.process.args[1] as string;
+    expect(command).toContain(
+      "if ! cmp -s /home/user/.codex/auth.json.tmp /home/user/.codex/auth.json; then",
+    );
+    expect(command).toContain(
+      "  CODEX_RUNTIME_CHANGED=1\nelse\n  rm -f /home/user/.codex/auth.json.tmp\nfi",
+    );
+    expect(command).not.toContain(
+      "chmod 600 /home/user/.codex/auth.json\nCODEX_RUNTIME_CHANGED=1\nprintf",
+    );
     expect(body.process.args[1]).toContain(
       "node /home/user/t3-server/bin.mjs serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web",
     );
