@@ -2,7 +2,12 @@ import { splitPromptIntoComposerSegments } from "./composer-editor-mentions";
 import { INLINE_TERMINAL_CONTEXT_PLACEHOLDER } from "./lib/terminalContext";
 
 export type ComposerTriggerKind = "path" | "slash-command" | "skill";
-export type ComposerSlashCommand = "model" | "plan" | "default";
+export type ComposerSlashCommand = "model" | "plan" | "default" | "goal";
+
+export type ComposerGoalCommand =
+  | { readonly action: "get" }
+  | { readonly action: "clear" }
+  | { readonly action: "set"; readonly objective: string };
 
 export interface ComposerTrigger {
   kind: ComposerTriggerKind;
@@ -272,6 +277,22 @@ export function parseStandaloneComposerSlashCommand(
   const command = match[1]?.toLowerCase();
   if (command === "plan") return "plan";
   return "default";
+}
+
+export function parseStandaloneComposerGoalCommand(text: string): ComposerGoalCommand | null {
+  const match = /^\/goal(?:\s+([\s\S]*?))?\s*$/i.exec(text.trim());
+  if (!match) {
+    return null;
+  }
+
+  const argument = match[1]?.trim() ?? "";
+  if (argument.length === 0) {
+    return { action: "get" };
+  }
+  if (argument.toLowerCase() === "clear") {
+    return { action: "clear" };
+  }
+  return { action: "set", objective: argument };
 }
 
 export function replaceTextRange(

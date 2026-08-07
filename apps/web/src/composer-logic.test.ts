@@ -6,6 +6,7 @@ import {
   detectComposerTrigger,
   expandCollapsedComposerCursor,
   isCollapsedCursorAdjacentToInlineToken,
+  parseStandaloneComposerGoalCommand,
   parseStandaloneComposerSlashCommand,
   replaceTextRange,
   shouldSubmitComposerOnEnter,
@@ -370,5 +371,29 @@ describe("parseStandaloneComposerSlashCommand", () => {
 
   it("ignores slash commands with extra message text", () => {
     expect(parseStandaloneComposerSlashCommand("/plan explain this")).toBeNull();
+  });
+});
+
+describe("parseStandaloneComposerGoalCommand", () => {
+  it("reads the current goal for a bare /goal command", () => {
+    expect(parseStandaloneComposerGoalCommand(" /goal ")).toEqual({ action: "get" });
+  });
+
+  it("clears the current goal", () => {
+    expect(parseStandaloneComposerGoalCommand("/goal clear")).toEqual({ action: "clear" });
+  });
+
+  it("preserves a multi-word objective", () => {
+    expect(parseStandaloneComposerGoalCommand("/goal Ship the sandbox upload flow")).toEqual({
+      action: "set",
+      objective: "Ship the sandbox upload flow",
+    });
+  });
+
+  it("does not treat a command with a suffix as a goal command", () => {
+    expect(parseStandaloneComposerGoalCommand("/goal clear this later")).toEqual({
+      action: "set",
+      objective: "clear this later",
+    });
   });
 });
