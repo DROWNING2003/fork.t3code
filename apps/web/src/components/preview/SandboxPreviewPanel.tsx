@@ -10,6 +10,11 @@ import {
 } from "~/previewStateStore";
 import { previewEnvironment } from "~/state/preview";
 import { useAtomCommand } from "~/state/use-atom-command";
+import {
+  BROWSER_HISTORY_MAX_ENTRIES_PER_PROJECT,
+  removeUrlForThread,
+  useThreadRecentHistory,
+} from "~/browserHistoryStore";
 
 import { PreviewChromeRow } from "./PreviewChromeRow";
 import { PreviewEmptyState } from "./PreviewEmptyState";
@@ -33,6 +38,10 @@ export function SandboxPreviewPanel({ threadRef, tabId, configuredUrls, visible 
   const [focusUrlNonce, setFocusUrlNonce] = useState<number | undefined>(undefined);
   const [selectionTabKey, setSelectionTabKey] = useState<string | null>(null);
   const previewState = useThreadPreviewState(threadRef);
+  const recentHistoryEntries = useThreadRecentHistory(
+    threadRef,
+    BROWSER_HISTORY_MAX_ENTRIES_PER_PROJECT,
+  );
   usePreviewSession(threadRef);
   const navigate = useAtomCommand(previewEnvironment.navigate, "sandbox preview navigate");
   const tabKey = tabId ?? "new";
@@ -123,6 +132,8 @@ export function SandboxPreviewPanel({ threadRef, tabId, configuredUrls, visible 
         environmentId={threadRef.environmentId}
         configuredUrls={configuredUrls}
         recentlySeenUrls={previewState.recentlySeenUrls}
+        recentEntries={recentHistoryEntries}
+        onRemoveRecent={(url) => removeUrlForThread(threadRef, url)}
         onOpenUrl={openPublicPreview}
       />
     );

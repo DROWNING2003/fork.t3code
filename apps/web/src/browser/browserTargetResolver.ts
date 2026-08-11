@@ -8,7 +8,8 @@ import { isLoopbackHost, normalizePreviewUrl } from "@t3tools/shared/preview";
 
 import { readPreparedConnection } from "~/state/session";
 
-const normalizeHostname = (host: string): string => host.toLowerCase().replace(/^\[|\]$/g, "");
+export const normalizeHostname = (host: string): string =>
+  host.toLowerCase().replace(/^\[|\]$/g, "");
 const SANDBOX_PROXY_HOSTNAME_PATTERN = /^\d+-([a-z0-9-]+)\.(.+)$/i;
 
 const parseIpv4Address = (host: string): readonly number[] | null => {
@@ -19,7 +20,7 @@ const parseIpv4Address = (host: string): readonly number[] | null => {
     : null;
 };
 
-const isLocalLoopbackHost = (host: string): boolean => {
+export const isLocalLoopbackHost = (host: string): boolean => {
   const normalized = normalizeHostname(host);
   if (normalized === "localhost" || normalized === "::1") return true;
   return parseIpv4Address(normalized)?.[0] === 127;

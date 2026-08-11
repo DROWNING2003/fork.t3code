@@ -4,6 +4,7 @@ export type SettingsSheetTarget =
   | "SettingsAppearance"
   | "SettingsProjectGrouping"
   | "SettingsClientStorage"
-  | "SettingsSandboxCredentials";
+  | "SettingsSandboxCredentials"
+  | "SettingsUsage";
 
 export type SettingsLegalDocumentTarget = "SettingsLegal";

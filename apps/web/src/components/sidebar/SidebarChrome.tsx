@@ -1,9 +1,10 @@
-import { CloudIcon, SettingsIcon } from "lucide-react";
+import { ChartNoAxesColumnIcon, CloudIcon, GitPullRequestIcon, SettingsIcon } from "lucide-react";
 import { memo, useCallback } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { cn } from "../../lib/utils";
+import { usePrimaryEnvironment } from "../../state/environments";
 import { isSandboxOnlyWeb } from "../../webSurface";
 import {
   resolveEnvironmentIdentificationPillLabel,
@@ -95,33 +96,68 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
 export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   const navigate = useNavigate();
   const { isMobile, setOpenMobile } = useSidebar();
+  const primaryEnvironment = usePrimaryEnvironment();
+  const pullRequestsSupported =
+    primaryEnvironment?.serverConfig?.environment.capabilities.pullRequests === true;
+  const closeMobileSidebar = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+  const handlePullRequestsClick = useCallback(() => {
+    closeMobileSidebar();
+    void navigate({ to: "/pull-requests", search: { involvement: "all", state: "open" } });
+  }, [closeMobileSidebar, navigate]);
   const handleNav = useCallback(
     (to: "/settings" | "/settings/sandbox" | "/sandboxes") => {
-      if (isMobile) {
-        setOpenMobile(false);
-      }
+      closeMobileSidebar();
       void navigate({ to });
     },
-    [isMobile, navigate, setOpenMobile],
+    [closeMobileSidebar, navigate],
   );
+  const handleSettingsClick = useCallback(() => {
+    handleNav(isSandboxOnlyWeb ? "/settings/sandbox" : "/settings");
+  }, [handleNav]);
+  const handleSandboxesClick = useCallback(() => {
+    handleNav("/sandboxes");
+  }, [handleNav]);
+
+  const handleUsageClick = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+    void navigate({ to: "/usage" });
+  }, [isMobile, navigate, setOpenMobile]);
 
   return (
     <SidebarFooter className="p-[var(--sidebar-content-inset)]">
       <SidebarProviderUpdatePill />
       <SidebarUpdatePill />
       <SidebarMenu>
+        {pullRequestsSupported ? (
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={handlePullRequestsClick}>
+              <GitPullRequestIcon />
+              <span>Pull Requests</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        ) : null}
         <SidebarMenuItem>
-          <SidebarMenuButton onClick={() => handleNav("/sandboxes")}>
+          <SidebarMenuButton onClick={handleUsageClick}>
+            <ChartNoAxesColumnIcon />
+            <span>Usage</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={handleSandboxesClick}>
             <CloudIcon />
             <span>{isSandboxOnlyWeb ? "沙箱" : "Sandbox"}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
         <SidebarMenuItem>
-          <SidebarMenuButton
-            onClick={() => handleNav(isSandboxOnlyWeb ? "/settings/sandbox" : "/settings")}
-          >
+          <SidebarMenuButton onClick={handleSettingsClick}>
             <SettingsIcon />
-            <span>{isSandboxOnlyWeb ? "沙箱凭证" : "Settings"}</span>
+            <span>Settings</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
