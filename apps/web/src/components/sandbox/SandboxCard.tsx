@@ -19,6 +19,7 @@ interface Props {
   readonly sandbox: SandboxInfo;
   readonly fallbackDomain?: string;
   readonly pendingAction: SandboxAction | null;
+  readonly pendingLabel?: string;
   readonly onConnect: () => void;
   readonly onPause: () => void;
   readonly onResume: () => void;
@@ -32,6 +33,7 @@ export function SandboxCard({
   sandbox,
   fallbackDomain,
   pendingAction,
+  pendingLabel,
   onConnect,
   onPause,
   onResume,
@@ -162,7 +164,7 @@ export function SandboxCard({
                 ) : (
                   <ArrowUpRightIcon className="size-3.5" />
                 )}
-                {pendingAction === "connect" ? "连接中" : "打开工作区"}
+                {pendingAction === "connect" ? (pendingLabel ?? "连接中") : "打开工作区"}
               </Button>
               <Button
                 size="icon-sm"

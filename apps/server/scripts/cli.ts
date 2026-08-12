@@ -164,15 +164,27 @@ const buildCmd = Command.make(
 
       const webPublic = path.join(repoRoot, "apps/web/public");
       if (yield* fs.exists(path.join(serverDir, "dist/bin.mjs"))) {
-        const tarball = path.join(webPublic, "t3-server-dist.tar.gz");
-        yield* runCommand(
-          ChildProcess.make(
-            "tar",
-            ["-czf", tarball, "--exclude=*.map", "--exclude=dist/client", "-C", serverDir, "dist"],
-            { stdout: "ignore", stderr: "inherit", shell: false },
-          ),
-        );
-        yield* Effect.log("[cli] Created t3-server-dist.tar.gz");
+        const tarball = path.join(webPublic, "t3-server-dist.bundle");
+        if (yield* fs.exists(tarball)) {
+          yield* Effect.log("[cli] Reusing t3-server-dist.bundle from build:bundle");
+        } else {
+          yield* runCommand(
+            ChildProcess.make(
+              "tar",
+              [
+                "-czf",
+                tarball,
+                "--exclude=*.map",
+                "--exclude=dist/client",
+                "-C",
+                serverDir,
+                "dist",
+              ],
+              { stdout: "ignore", stderr: "inherit", shell: false },
+            ),
+          );
+          yield* Effect.log("[cli] Created t3-server-dist.bundle");
+        }
       }
 
       const webDist = path.join(repoRoot, "apps/web/dist");

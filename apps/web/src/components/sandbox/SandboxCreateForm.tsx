@@ -9,6 +9,11 @@ import { useState } from "react";
 import { useSandboxCredentials } from "../../hooks/useSandboxCredentials";
 import { useSandboxApi } from "../../hooks/useSandboxApi";
 import { getAdditionalInjections } from "../../lib/sandboxCredentialStore";
+import {
+  formatSandboxConnectionError,
+  sandboxConnectionStageLabel,
+  type SandboxConnectionStage,
+} from "../../lib/sandboxConnection";
 import { setActiveEnvironmentId } from "../../state/entities";
 import { Button } from "../ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardPanel, CardFooter } from "../ui/card";
@@ -29,10 +34,14 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
   const [name, setName] = useState("");
   const [createdSandboxID, setCreatedSandboxID] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "creating" | "error">("idle");
+  const [connectionStage, setConnectionStage] = useState<SandboxConnectionStage | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (!creds.hasRequired) return;
     setStatus("creating");
+    setConnectionStage(null);
+    setErrorMessage(null);
     try {
       const hours = Math.max(1, parseInt(timeoutHours, 10) || 3);
       let sandboxID = createdSandboxID;
@@ -74,11 +83,12 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
         setCreatedSandboxID(sandboxID);
       }
       const connected = await api.connect(sandboxID, 3600);
-      const environmentId = await connect(connected);
+      const environmentId = await connect(connected, setConnectionStage);
       setActiveEnvironmentId(environmentId);
       onSuccess();
-    } catch {
+    } catch (error) {
       setStatus("error");
+      setErrorMessage(formatSandboxConnectionError(error));
     }
   };
 
@@ -161,13 +171,17 @@ export function SandboxCreateForm({ onSuccess, onCancel }: Props) {
         </CardPanel>
         <CardFooter>
           {status === "creating" ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
               <LoaderIcon className="size-4 animate-spin" />
-              {createdSandboxID ? "正在连接沙箱..." : "正在创建并启动沙箱..."}
+              {createdSandboxID
+                ? connectionStage
+                  ? sandboxConnectionStageLabel(connectionStage)
+                  : "连接沙箱..."
+                : "正在创建并启动沙箱..."}
             </div>
           ) : status === "error" ? (
-            <p className="text-sm text-destructive">
-              {createdSandboxID ? "连接失败，可重试连接" : "创建失败，请重试"}
+            <p className="max-w-[24rem] break-words text-sm text-destructive" role="alert">
+              {errorMessage ?? (createdSandboxID ? "连接失败，可重试连接" : "创建失败，请重试")}
             </p>
           ) : null}
           <div className="ml-auto flex items-center gap-2">

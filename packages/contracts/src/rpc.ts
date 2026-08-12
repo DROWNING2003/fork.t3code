@@ -89,6 +89,11 @@ import {
   PullRequestUnavailableError,
 } from "./pullRequest.ts";
 import {
+  ProviderThreadGoalError,
+  ProviderThreadGoalInput,
+  ProviderThreadGoalResult,
+} from "./provider.ts";
+import {
   RelayClientInstallFailedError,
   RelayClientInstallProgressEventSchema,
   RelayClientStatusSchema,
@@ -204,6 +209,9 @@ export const WS_METHODS = {
   // Filesystem methods
   filesystemBrowse: "filesystem.browse",
   assetsCreateUrl: "assets.createUrl",
+
+  // Provider-native methods
+  providerThreadGoal: "provider.threadGoal",
 
   // VCS methods
   vcsPull: "vcs.pull",
@@ -631,6 +639,12 @@ export const WsAssetsCreateUrlRpc = Rpc.make(WS_METHODS.assetsCreateUrl, {
   error: Schema.Union([AssetAccessError, EnvironmentAuthorizationError]),
 });
 
+export const WsProviderThreadGoalRpc = Rpc.make(WS_METHODS.providerThreadGoal, {
+  payload: ProviderThreadGoalInput,
+  success: ProviderThreadGoalResult,
+  error: Schema.Union([ProviderThreadGoalError, EnvironmentAuthorizationError]),
+});
+
 export const WsSubscribeVcsStatusRpc = Rpc.make(WS_METHODS.subscribeVcsStatus, {
   payload: VcsStatusInput,
   success: VcsStatusStreamEvent,
@@ -994,6 +1008,7 @@ export const WsRpcGroup = RpcGroup.make(
   WsShellOpenInEditorRpc,
   WsFilesystemBrowseRpc,
   WsAssetsCreateUrlRpc,
+  WsProviderThreadGoalRpc,
   WsSubscribeVcsStatusRpc,
   WsVcsPullRpc,
   WsVcsRefreshStatusRpc,

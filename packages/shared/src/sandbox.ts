@@ -25,6 +25,8 @@ export interface SandboxConnectionInfo {
 
 export interface SandboxInjectionBase {
   readonly type: string;
+  readonly if_headers?: Readonly<Record<string, string>>;
+  readonly if_queries?: Readonly<Record<string, string>>;
 }
 
 export interface OpenaiInjection extends SandboxInjectionBase {
@@ -47,7 +49,19 @@ export interface GeminiInjection extends SandboxInjectionBase {
 
 export interface QiniuInjection extends SandboxInjectionBase {
   readonly type: "qiniu";
+  readonly base_url?: string;
   readonly api_key: string;
+}
+
+export interface GithubInjection extends SandboxInjectionBase {
+  readonly type: "github";
+  readonly base_url?: string;
+  readonly token: string;
+}
+
+export interface InjectionById {
+  readonly type: "id";
+  readonly id: string;
 }
 
 export interface HttpInjection extends SandboxInjectionBase {
@@ -57,10 +71,12 @@ export interface HttpInjection extends SandboxInjectionBase {
 }
 
 export type SandboxInjection =
+  | InjectionById
   | OpenaiInjection
   | AnthropicInjection
   | GeminiInjection
   | QiniuInjection
+  | GithubInjection
   | HttpInjection;
 
 export interface CodexProviderConfig {

@@ -8,7 +8,7 @@ import { AndroidScreenHeader } from "../../components/AndroidScreenHeader";
 import { AppText as Text, AppTextInput as TextInput } from "../../components/AppText";
 import { ErrorBanner } from "../../components/ErrorBanner";
 import { ConnectionSheetButton } from "../connection/ConnectionSheetButton";
-import { useSandboxApi } from "./useSandboxApi";
+import { MOBILE_T3_SERVER_BUNDLE_URL, useSandboxApi } from "./useSandboxApi";
 import { useSandboxCredentials } from "./useSandboxCredentials";
 import { getAdditionalInjections } from "./useSandboxCredentials";
 import { useRemoteConnections } from "../../state/use-remote-environment-registry";
@@ -33,6 +33,7 @@ export function SandboxNewSheet() {
   const api = useSandboxApi({
     apiKey: credentials.e2bApiKey ?? "",
     apiUrl: credentials.e2bApiUrl,
+    serverBundleUrl: MOBILE_T3_SERVER_BUNDLE_URL,
   });
   const { onConnectPress } = useRemoteConnections();
 

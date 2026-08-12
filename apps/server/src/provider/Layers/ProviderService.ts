@@ -19,6 +19,8 @@ import {
   ProviderSendTurnInput,
   ProviderSessionStartInput,
   ProviderStopSessionInput,
+  ProviderThreadGoalInput,
+  ProviderThreadGoalResult,
   type ProviderInstanceId,
   type ProviderDriverKind,
   type ProviderRuntimeEvent,
@@ -69,7 +71,7 @@ export interface ProviderServiceLiveOptions {
 }
 
 type ProviderServiceMethod<Name extends keyof ProviderService.ProviderService["Service"]> =
-  ProviderService.ProviderService["Service"][Name];
+  NonNullable<ProviderService.ProviderService["Service"][Name]>;
 
 const ProviderRollbackConversationInput = Schema.Struct({
   threadId: ThreadId,
@@ -1125,6 +1127,28 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
     ),
   );
 
+  const setThreadGoal: ProviderServiceMethod<"setThreadGoal"> = Effect.fn("setThreadGoal")(
+    function* (rawInput) {
+      const input = yield* decodeInputOrValidationError({
+        operation: "ProviderService.setThreadGoal",
+        schema: ProviderThreadGoalInput,
+        payload: rawInput,
+      });
+      const routed = yield* resolveRoutableSession({
+        threadId: input.threadId,
+        operation: "ProviderService.setThreadGoal",
+        allowRecovery: true,
+      });
+      const setThreadGoalOnAdapter = routed.adapter.setThreadGoal;
+      if (setThreadGoalOnAdapter === undefined) {
+        return yield* new ProviderUnsupportedError({
+          provider: routed.adapter.provider,
+        });
+      }
+      return yield* setThreadGoalOnAdapter(input);
+    },
+  );
+
   return {
     startSession,
     sendTurn,
@@ -1136,6 +1160,7 @@ const makeProviderService = Effect.fn("makeProviderService")(function* (
     getCapabilities,
     getInstanceInfo,
     rollbackConversation,
+    setThreadGoal,
     // Each access creates a fresh PubSub subscription so that multiple
     // consumers (ProviderRuntimeIngestion, CheckpointReactor, etc.) each
     // independently receive all runtime events.

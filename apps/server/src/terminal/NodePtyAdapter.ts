@@ -1,6 +1,7 @@
 import * as NodeModule from "node:module";
 
 import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
 import * as FileSystem from "effect/FileSystem";
 import * as Layer from "effect/Layer";
 import * as Path from "effect/Path";
@@ -24,7 +25,136 @@ export class NodePtyModuleLoadError extends Schema.TaggedErrorClass<NodePtyModul
 
 type NodePtyModuleLoader = () => Promise<typeof import("node-pty")>;
 
+type PipeProcessStream = {
+  on(event: "data", listener: (data: { toString(): string }) => void): unknown;
+};
+
+export type PipeChildProcess = {
+  readonly pid: number | null;
+  readonly stdin: {
+    readonly destroyed: boolean;
+    write(data: string): boolean;
+  };
+  readonly stdout: PipeProcessStream;
+  readonly stderr: PipeProcessStream;
+  readonly killed: boolean;
+  kill(signal?: NodeJS.Signals): boolean;
+  on(
+    event: "exit",
+    listener: (exitCode: number | null, signal: NodeJS.Signals | null) => void,
+  ): unknown;
+  on(event: "error", listener: (error: unknown) => void): unknown;
+};
+
+export type PipeChildProcessSpawner = (
+  command: string,
+  args: ReadonlyArray<string>,
+  options: {
+    cwd: string;
+    env: NodeJS.ProcessEnv;
+    stdio: ["pipe", "pipe", "pipe"];
+  },
+) => PipeChildProcess;
+
+const nodeChildProcess = NodeModule.createRequire(import.meta.url)("node:child_process") as {
+  spawn: PipeChildProcessSpawner;
+};
+
 let didEnsureSpawnHelperExecutable = false;
+
+class PipePtyProcess implements PtyAdapter.PtyProcess {
+  private readonly dataListeners = new Set<(data: string) => void>();
+  private readonly exitListeners = new Set<(event: PtyAdapter.PtyExitEvent) => void>();
+  private didExit = false;
+
+  private readonly process: PipeChildProcess;
+
+  constructor(process: PipeChildProcess) {
+    this.process = process;
+    this.process.stdout.on("data", (data) => this.emitData(data.toString()));
+    this.process.stderr.on("data", (data) => this.emitData(data.toString()));
+    this.process.on("exit", (exitCode) => {
+      this.emitExit({ exitCode: exitCode ?? 1, signal: null });
+    });
+    this.process.on("error", () => {
+      this.emitExit({ exitCode: 1, signal: null });
+    });
+  }
+
+  get pid(): number {
+    return this.process.pid ?? -1;
+  }
+
+  write(data: string): void {
+    if (!this.process.stdin.destroyed) {
+      this.process.stdin.write(data);
+    }
+  }
+
+  resize(_cols: number, _rows: number): void {
+    // A pipe does not expose terminal dimensions. The fallback intentionally
+    // keeps the same public contract while allowing the server to start.
+  }
+
+  kill(signal?: string): void {
+    if (!this.process.killed) {
+      this.process.kill(signal as NodeJS.Signals | undefined);
+    }
+  }
+
+  onData(callback: (data: string) => void): () => void {
+    this.dataListeners.add(callback);
+    return () => {
+      this.dataListeners.delete(callback);
+    };
+  }
+
+  onExit(callback: (event: PtyAdapter.PtyExitEvent) => void): () => void {
+    this.exitListeners.add(callback);
+    return () => {
+      this.exitListeners.delete(callback);
+    };
+  }
+
+  private emitData(data: string): void {
+    if (this.didExit) return;
+    for (const listener of this.dataListeners) {
+      listener(data);
+    }
+  }
+
+  private emitExit(event: PtyAdapter.PtyExitEvent): void {
+    if (this.didExit) return;
+    this.didExit = true;
+    for (const listener of this.exitListeners) {
+      listener(event);
+    }
+  }
+}
+
+function makePipePtyAdapter(
+  spawnChildProcess: PipeChildProcessSpawner = nodeChildProcess.spawn,
+): PtyAdapter.PtyAdapter["Service"] {
+  return PtyAdapter.PtyAdapter.of({
+    spawn: Effect.fn("NodePtyAdapter.spawnPipeFallback")(function* (input) {
+      const process = yield* Effect.try({
+        try: () =>
+          spawnChildProcess(input.shell, input.args ?? [], {
+            cwd: input.cwd,
+            env: input.env,
+            stdio: ["pipe", "pipe", "pipe"],
+          }),
+        catch: (cause) =>
+          new PtyAdapter.PtySpawnError({
+            adapter: "child-process-pipe",
+            shell: input.shell,
+            cause,
+          }),
+      });
+      return new PipePtyProcess(process);
+    }),
+  });
+}
 
 const resolveNodePtySpawnHelperPath = Effect.gen(function* () {
   const requireForNodePty = NodeModule.createRequire(import.meta.url);
@@ -170,3 +300,18 @@ export const make = Effect.fn("NodePtyAdapter.make")(function* (
 });
 
 export const layer = Layer.effect(PtyAdapter.PtyAdapter, make());
+
+export const makeWithFallback = Effect.fn("NodePtyAdapter.makeWithFallback")(function* (
+  loadNodePtyModule: NodePtyModuleLoader = () => import("node-pty"),
+  spawnChildProcess: PipeChildProcessSpawner = nodeChildProcess.spawn,
+) {
+  const nodePtyExit = yield* Effect.exit(make(loadNodePtyModule));
+  if (Exit.isSuccess(nodePtyExit)) return nodePtyExit.value;
+
+  yield* Effect.logWarning("node-pty unavailable; using pipe-based terminal fallback", {
+    cause: nodePtyExit.cause,
+  });
+  return makePipePtyAdapter(spawnChildProcess);
+});
+
+export const layerWithFallback = Layer.effect(PtyAdapter.PtyAdapter, makeWithFallback());

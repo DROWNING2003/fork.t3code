@@ -8,7 +8,7 @@ import { AndroidScreenHeader } from "../../components/AndroidScreenHeader";
 import { AppText as Text } from "../../components/AppText";
 import { EmptyState } from "../../components/EmptyState";
 import { ConnectionSheetButton } from "../connection/ConnectionSheetButton";
-import { useSandboxApi } from "./useSandboxApi";
+import { MOBILE_T3_SERVER_BUNDLE_URL, useSandboxApi } from "./useSandboxApi";
 import { useSandboxCredentials } from "./useSandboxCredentials";
 import { getAdditionalInjections } from "./useSandboxCredentials";
 import { isSandboxConnecting, type SandboxInfo, sandboxUrl } from "./sandboxTypes";
@@ -59,6 +59,7 @@ export function SandboxRouteScreen() {
   } = useSandboxApi({
     apiKey: credentials.e2bApiKey ?? "",
     apiUrl: credentials.e2bApiUrl,
+    serverBundleUrl: MOBILE_T3_SERVER_BUNDLE_URL,
   });
   const { onConnectPress } = useRemoteConnections();
   const { savedConnectionsById } = useSavedRemoteConnections();

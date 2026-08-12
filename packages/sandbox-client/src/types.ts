@@ -3,10 +3,12 @@ import type {
   SandboxConnectionInfo,
   SandboxCreateInput,
   SandboxInjection,
+  InjectionById,
   OpenaiInjection,
   AnthropicInjection,
   GeminiInjection,
   QiniuInjection,
+  GithubInjection,
   HttpInjection,
   CodexProviderConfig,
   SandboxSkill,
@@ -19,10 +21,12 @@ export type {
   SandboxConnectionInfo,
   SandboxCreateInput,
   SandboxInjection,
+  InjectionById,
   OpenaiInjection,
   AnthropicInjection,
   GeminiInjection,
   QiniuInjection,
+  GithubInjection,
   HttpInjection,
   CodexProviderConfig,
   SandboxSkill,
@@ -56,6 +60,8 @@ export interface InjectionStore {
 export interface T3StartOptions extends EnvdAccess {
   readonly domain: string | null | undefined;
   readonly fallbackDomain?: string | null;
+  /** The build-time server bundle to install before starting T3. */
+  readonly serverBundle: Blob;
   readonly codexProviders?: ReadonlyArray<CodexProviderConfig>;
   readonly skills?: ReadonlyArray<SandboxSkill>;
   readonly serverCommand?: string;

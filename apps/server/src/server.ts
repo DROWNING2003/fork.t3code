@@ -134,7 +134,9 @@ const PtyAdapterLive = Layer.unwrap(
       return BunPtyAdapter.layer;
     } else {
       const NodePtyAdapter = yield* Effect.promise(() => import("./terminal/NodePtyAdapter.ts"));
-      return NodePtyAdapter.layer;
+      return process.env.T3CODE_SANDBOX === "1"
+        ? NodePtyAdapter.layerWithFallback
+        : NodePtyAdapter.layer;
     }
   }),
 );

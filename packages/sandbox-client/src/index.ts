@@ -3,10 +3,12 @@ export type {
   SandboxConnectionInfo,
   SandboxCreateInput,
   SandboxInjection,
+  InjectionById,
   OpenaiInjection,
   AnthropicInjection,
   GeminiInjection,
   QiniuInjection,
+  GithubInjection,
   HttpInjection,
   CodexProviderConfig,
   SandboxSkill,
@@ -50,6 +52,10 @@ export { uploadSandboxFile, ENVD_FILE_UPLOAD_TIMEOUT_MS } from "./files";
 export type { SandboxFileUploadOptions } from "./files";
 
 export {
+  DEFAULT_T3_SERVER_COMMAND,
+  T3_SERVER_BUNDLE_FILE_NAME,
+  T3_SERVER_BUNDLE_PATH,
+  T3_STARTUP_LOG_PATH,
   buildT3StartCommand,
   startT3Server,
   waitForT3Server,
@@ -57,6 +63,8 @@ export {
   readPairingUrlFromJson,
   getT3PairingUrl,
 } from "./t3-orchestrator";
+
+export { DEFAULT_T3_SERVER_BUNDLE_URL, fetchT3ServerBundle } from "./bundle";
 
 export {
   createLocalStorageCredentialStore,

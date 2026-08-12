@@ -16,7 +16,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/bin.ts",
-    "build:bundle": "vp pack && vp pack src/service-launcher.ts --out-dir dist --no-clean",
+    "build:bundle": "vp pack && vp pack src/service-launcher.ts --out-dir dist --no-clean && mkdir -p dist/node_modules/@ff-labs dist/node_modules/@yuuang && cp -RL node_modules/@ff-labs/fff-node dist/node_modules/@ff-labs/ && cp -RL ../../node_modules/.pnpm/node_modules/ffi-rs dist/node_modules/ && cp -RL ../../node_modules/.pnpm/node_modules/@ff-labs/fff-bin-linux-x64-gnu dist/node_modules/@ff-labs/ && cp -RL ../../node_modules/.pnpm/node_modules/@yuuang/ffi-rs-linux-x64-gnu dist/node_modules/@yuuang/ && bash scripts/build-sandbox-node-pty.sh dist && gzip -9 -f dist/node_modules/@ff-labs/fff-bin-linux-x64-gnu/libfff_c.so && mkdir -p ../web/public && tar -czf ../web/public/t3-server-dist.bundle --exclude='*.map' --exclude='dist/client' -C . dist",
     "start": "node dist/bin.mjs",
     "typecheck": "tsgo --noEmit",
     "test": "vp test run"

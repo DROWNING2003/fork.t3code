@@ -114,3 +114,50 @@ it.effect("reports native module load failures as structured startup defects", (
     ),
   ),
 );
+
+it.effect("falls back to a pipe-based terminal when node-pty is unavailable", () =>
+  Effect.gen(function* () {
+    const childProcess = {
+      pid: 43,
+      stdin: { destroyed: false, write: vi.fn() },
+      stdout: { on: vi.fn() },
+      stderr: { on: vi.fn() },
+      on: vi.fn(),
+      kill: vi.fn(),
+    } as unknown as NodePtyAdapter.PipeChildProcess;
+    const spawnChildProcess = vi.fn<NodePtyAdapter.PipeChildProcessSpawner>(() => childProcess);
+
+    const adapter = yield* NodePtyAdapter.makeWithFallback(
+      () => Promise.reject(new Error("node-pty is unavailable")),
+      spawnChildProcess,
+    );
+    const process = yield* adapter.spawn({
+      shell: "/bin/sh",
+      args: ["-l"],
+      cwd: "/tmp",
+      cols: 120,
+      rows: 30,
+      env: {},
+    });
+
+    assert.equal(process.pid, 43);
+    assert.equal(spawnChildProcess.mock.calls.length, 1);
+    assert.deepEqual(spawnChildProcess.mock.calls[0], [
+      "/bin/sh",
+      ["-l"],
+      {
+        cwd: "/tmp",
+        env: {},
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    ]);
+  }).pipe(
+    Effect.provide(
+      Layer.mergeAll(
+        NodeServices.layer,
+        Layer.succeed(HostProcessPlatform, "linux"),
+        Layer.succeed(HostProcessArchitecture, "x64"),
+      ),
+    ),
+  ),
+);

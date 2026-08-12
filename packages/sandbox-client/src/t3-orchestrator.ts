@@ -9,14 +9,24 @@ import {
   buildSkillInstallCommands,
 } from "@t3tools/shared/sandbox";
 import { envdHeaders, envdHealthCheck, envdProcessStart, envdFileUrl, envdFileRead } from "./envd";
+import { uploadSandboxFile } from "./files";
 import type { T3StartOptions } from "./types";
 
 const CODEX_AUTH_PATH = "/home/user/.codex/auth.json";
 const CODEX_CONFIG_PATH = "/home/user/.codex/config.toml";
 const MOBILE_PAIRING_PATH = "/home/user/.t3/mobile-pairing.json";
+export const T3_STARTUP_LOG_PATH = "/home/user/.t3/startup.log";
+const T3_STARTUP_LOG_MAX_CHARS = 2_000;
+export const T3_SERVER_BUNDLE_FILE_NAME = "t3-server-dist.bundle";
+export const T3_SERVER_BUNDLE_PATH = `/tmp/.t3-server-${T3_SERVER_BUNDLE_FILE_NAME}`;
+const T3_SERVER_RUNTIME_DIR = "/tmp/.t3-server-runtime";
+const T3_SERVER_RUNTIME_ENTRY = `${T3_SERVER_RUNTIME_DIR}/bin.mjs`;
 export const T3_SERVER_RETRY_DELAY_MS = 3_000;
 export const PAIRING_ATTEMPT_DELAY_MS = 5_000;
 export const PAIRING_FILE_POLL_DELAY_MS = 1_000;
+export const DEFAULT_T3_SERVER_COMMAND =
+  'nohup node "$T3_SERVER_ENTRY" serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web';
+const T3_SERVER_NO_STATIC_DIRECTORY_RESPONSE = "No static directory configured and no dev URL set.";
 
 function shellQuote(value: string): string {
   return `'${value.replaceAll("'", "'\"'\"'")}'`;
@@ -69,8 +79,8 @@ const AGENT_PLACEHOLDERS: ReadonlyArray<{ readonly path: string; readonly conten
   },
 ];
 
-// zkp-t3 already contains these placeholder files. Keep the old-template
-// fallback available, but do not rewrite the files on every mobile connect.
+// Some sandbox images already contain these placeholder files. Keep this
+// optional bootstrap disabled so connects do not rewrite them unnecessarily.
 const ENABLE_LEGACY_AGENT_PLACEHOLDER_BOOTSTRAP = false;
 
 function buildAgentPlaceholderCommands(): string[] {
@@ -94,10 +104,38 @@ export function buildT3StartCommand(
 ): string {
   const lines = [
     "unset T3CODE_PAIRING_TOKEN",
+    "export T3CODE_SANDBOX=1",
     "export HOME=/home/user T3CODE_HOME=/home/user/.t3 CODEX_HOME=/home/user/.codex",
     "mkdir -p /home/user/.t3 /home/user/.codex",
     ...buildSkillInstallCommands(skills),
-    "CODEX_RUNTIME_CHANGED=0",
+    `T3_SERVER_BUNDLE="${T3_SERVER_BUNDLE_PATH}"`,
+    `T3_SERVER_RUNTIME_DIR="${T3_SERVER_RUNTIME_DIR}"`,
+    'T3_SERVER_RUNTIME_ENTRY="$T3_SERVER_RUNTIME_DIR/bin.mjs"',
+    'T3_SERVER_ENTRY="$T3_SERVER_RUNTIME_ENTRY"',
+    'if [ ! -s "$T3_SERVER_BUNDLE" ]; then echo "T3 server bundle is missing" >&2; exit 1; fi',
+    'T3_SERVER_RUNTIME_STAGING="${T3_SERVER_RUNTIME_DIR}.staging"',
+    'rm -rf "$T3_SERVER_RUNTIME_STAGING"',
+    'mkdir -p "$T3_SERVER_RUNTIME_STAGING"',
+    'if ! tar -xzf "$T3_SERVER_BUNDLE" --strip-components=1 -C "$T3_SERVER_RUNTIME_STAGING"; then',
+    '  echo "Could not extract the T3 server bundle" >&2',
+    '  rm -rf "$T3_SERVER_RUNTIME_STAGING"',
+    "  exit 1",
+    "fi",
+    'T3_FFF_LIBRARY="$T3_SERVER_RUNTIME_STAGING/node_modules/@ff-labs/fff-bin-linux-x64-gnu/libfff_c.so"',
+    'if [ -s "$T3_FFF_LIBRARY.gz" ]; then',
+    '  if ! gzip -d "$T3_FFF_LIBRARY.gz"; then',
+    '    echo "Could not decompress the T3 file-search native library" >&2',
+    '    rm -rf "$T3_SERVER_RUNTIME_STAGING"',
+    "    exit 1",
+    "  fi",
+    "fi",
+    'if [ ! -s "$T3_SERVER_RUNTIME_STAGING/bin.mjs" ]; then',
+    '  echo "The T3 server bundle does not contain dist/bin.mjs" >&2',
+    '  rm -rf "$T3_SERVER_RUNTIME_STAGING"',
+    "  exit 1",
+    "fi",
+    'rm -rf "$T3_SERVER_RUNTIME_DIR"',
+    'mv "$T3_SERVER_RUNTIME_STAGING" "$T3_SERVER_RUNTIME_DIR"',
   ];
 
   const authJson = buildCodexAuthJson(
@@ -131,7 +169,6 @@ export function buildT3StartCommand(
     `if ! cmp -s ${CODEX_AUTH_PATH}.tmp ${CODEX_AUTH_PATH}; then`,
     `  mv ${CODEX_AUTH_PATH}.tmp ${CODEX_AUTH_PATH}`,
     `  chmod 600 ${CODEX_AUTH_PATH}`,
-    "  CODEX_RUNTIME_CHANGED=1",
     "else",
     `  rm -f ${CODEX_AUTH_PATH}.tmp`,
     "fi",
@@ -141,7 +178,6 @@ export function buildT3StartCommand(
     `if ! cmp -s ${CODEX_CONFIG_PATH}.tmp ${CODEX_CONFIG_PATH}; then`,
     `  mv ${CODEX_CONFIG_PATH}.tmp ${CODEX_CONFIG_PATH}`,
     `  chmod 600 ${CODEX_CONFIG_PATH}`,
-    "  CODEX_RUNTIME_CHANGED=1",
     "else",
     `  rm -f ${CODEX_CONFIG_PATH}.tmp`,
     "fi",
@@ -156,6 +192,7 @@ export function buildT3StartCommand(
   }
 
   lines.push(
+    "if command -v fuser >/dev/null 2>&1; then fuser -k 8080/tcp >/dev/null 2>&1 || true; fi",
     // The minimal sandbox template does not necessarily include procps/pgrep.
     // Inspect /proc instead so reconnects can still replace a server started by
     // the image entrypoint rather than silently starting a second copy.
@@ -166,12 +203,11 @@ export function buildT3StartCommand(
     '  if [ -r "$PROC_DIR/cmdline" ]; then',
     "    CMDLINE=\"$(tr '\\0' ' ' < \"$PROC_DIR/cmdline\" 2>/dev/null || true)\"",
     '    case "$CMDLINE" in',
-    '      *"/home/user/t3-server/bin.mjs serve --port 8080"*) RUNNING_PID="$PID"; break ;;',
+    '      *"bin.mjs serve --port 8080"*) RUNNING_PID="$PID"; break ;;',
     "    esac",
     "  fi",
     "done",
     'if [ -n "$RUNNING_PID" ]; then',
-    "  if [ \"$CODEX_RUNTIME_CHANGED\" = 0 ] && ! grep -qx 'Token: t3code-dev' /home/user/.t3/startup.log 2>/dev/null; then exit 0; fi",
     '  kill "$RUNNING_PID"',
     "  WAIT_ATTEMPTS=0",
     '  while kill -0 "$RUNNING_PID" 2>/dev/null && [ "$WAIT_ATTEMPTS" -lt 50 ]; do',
@@ -188,7 +224,7 @@ export function buildT3StartCommand(
     "  fi",
     '  if kill -0 "$RUNNING_PID" 2>/dev/null; then exit 1; fi',
     "fi",
-    `${serverCommand} > /home/user/.t3/startup.log 2>&1 </dev/null &`,
+    `${serverCommand} > ${T3_STARTUP_LOG_PATH} 2>&1 </dev/null &`,
   );
   return lines.join("\n");
 }
@@ -204,9 +240,21 @@ export async function startT3Server(options: T3StartOptions): Promise<void> {
   const healthy = await envdHealthCheck(envdBase, headers, { fetchImpl, wait });
   if (!healthy) throw new Error("envd is not ready");
 
-  const serverCommand =
-    options.serverCommand ??
-    "nohup node /home/user/t3-server/bin.mjs serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web";
+  await uploadSandboxFile({
+    sandboxID: options.sandboxID,
+    domain: options.domain,
+    fallbackDomain: options.fallbackDomain ?? null,
+    path: T3_SERVER_BUNDLE_PATH,
+    file: options.serverBundle,
+    fileName: T3_SERVER_BUNDLE_FILE_NAME,
+    fetchImpl,
+    ...(options.envdAccessToken !== undefined ? { envdAccessToken: options.envdAccessToken } : {}),
+    ...(options.trafficAccessToken !== undefined
+      ? { trafficAccessToken: options.trafficAccessToken }
+      : {}),
+  });
+
+  const serverCommand = options.serverCommand ?? DEFAULT_T3_SERVER_COMMAND;
 
   const command = buildT3StartCommand(
     options.codexProviders ?? [],
@@ -237,17 +285,48 @@ export async function waitForT3Server(
     try {
       const res = await fetchImpl(serverUrl, { signal: AbortSignal.timeout(3000) });
       if (res.ok) return;
+      if (res.status === 503) {
+        const body = await res.text().catch(() => "");
+        if (body.trim() === T3_SERVER_NO_STATIC_DIRECTORY_RESPONSE) return;
+      }
     } catch {}
     if (i + 1 < retries) await wait(retryDelay);
   }
   throw new Error(`The sandbox service did not become ready at ${serverUrl}`);
 }
 
+async function readT3StartupLog(
+  sandboxID: string,
+  domain: string | null | undefined,
+  fallbackDomain: string | null | undefined,
+  headers: Record<string, string>,
+  fetchImpl: typeof fetch,
+): Promise<string | null> {
+  try {
+    const response = await envdFileRead(
+      envdFileUrl(sandboxID, domain, fallbackDomain, T3_STARTUP_LOG_PATH),
+      headers,
+      { fetchImpl, retryCount: 1 },
+    );
+    if (!response) return null;
+    const text = (await response.text()).trim();
+    if (!text) return null;
+    return text.length > T3_STARTUP_LOG_MAX_CHARS
+      ? `…${text.slice(-T3_STARTUP_LOG_MAX_CHARS)}`
+      : text;
+  } catch {
+    return null;
+  }
+}
+
 export function buildT3PairingCommand(serverUrl: string): string {
   return [
     "set -eu",
     `rm -f ${MOBILE_PAIRING_PATH} ${MOBILE_PAIRING_PATH}.tmp`,
-    `node /home/user/t3-server/bin.mjs auth pairing create --base-dir /home/user/.t3 --base-url '${serverUrl}' --ttl 15m --label mobile-sandbox --json > ${MOBILE_PAIRING_PATH}.tmp`,
+    `T3_SERVER_RUNTIME_ENTRY="${T3_SERVER_RUNTIME_ENTRY}"`,
+    'T3_SERVER_ENTRY="$T3_SERVER_RUNTIME_ENTRY"',
+    'if [ ! -s "$T3_SERVER_ENTRY" ]; then echo "T3 server runtime is missing" >&2; exit 1; fi',
+    `node "$T3_SERVER_ENTRY" auth pairing create --base-dir /home/user/.t3 --base-url '${serverUrl}' --ttl 15m --label mobile-sandbox --json > ${MOBILE_PAIRING_PATH}.tmp`,
     `mv ${MOBILE_PAIRING_PATH}.tmp ${MOBILE_PAIRING_PATH}`,
   ].join("\n");
 }
@@ -280,6 +359,9 @@ export async function getT3PairingUrl(
     readonly pairingCommand?: string;
     readonly attemptDelayMs?: number;
     readonly pairingPollDelayMs?: number;
+    readonly serverRetryCount?: number;
+    readonly serverRetryDelayMs?: number;
+    readonly wait?: (ms: number) => Promise<void>;
   },
 ): Promise<string> {
   const serverUrl = sandboxUrl(sandboxID, domain, fallbackDomain, DEFAULT_T3_PORT);
@@ -291,9 +373,28 @@ export async function getT3PairingUrl(
   const headers = envdHeaders({ sandboxID, ...access });
   const fetchImpl = options?.fetchImpl ?? fetch;
 
-  await waitForT3Server(serverUrl, { fetchImpl });
-
   const fileUrl = envdFileUrl(sandboxID, domain, fallbackDomain, MOBILE_PAIRING_PATH);
+  try {
+    await waitForT3Server(serverUrl, {
+      fetchImpl,
+      ...(options?.serverRetryCount !== undefined ? { retryCount: options.serverRetryCount } : {}),
+      ...(options?.serverRetryDelayMs !== undefined
+        ? { retryDelayMs: options.serverRetryDelayMs }
+        : {}),
+      ...(options?.wait !== undefined ? { wait: options.wait } : {}),
+    });
+  } catch (error) {
+    const startupLog = await readT3StartupLog(
+      sandboxID,
+      domain,
+      fallbackDomain,
+      headers,
+      fetchImpl,
+    );
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(startupLog ? `${message}. T3 startup log: ${startupLog}` : message);
+  }
+
   const pairingCmd = options?.pairingCommand ?? buildT3PairingCommand(serverUrl);
   const attemptDelay = options?.attemptDelayMs ?? PAIRING_ATTEMPT_DELAY_MS;
   const pairingPollDelay = options?.pairingPollDelayMs ?? PAIRING_FILE_POLL_DELAY_MS;

@@ -19,6 +19,11 @@ import { useSandboxCredentials } from "../../hooks/useSandboxCredentials";
 import { useSandboxApi } from "../../hooks/useSandboxApi";
 import { setActiveEnvironmentId } from "../../state/entities";
 import { useAtomCommand } from "../../state/use-atom-command";
+import {
+  formatSandboxConnectionError,
+  sandboxConnectionStageLabel,
+  type SandboxConnectionStage,
+} from "../../lib/sandboxConnection";
 import { Button } from "../ui/button";
 import {
   Empty,
@@ -65,6 +70,7 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
     readonly sandboxID: string;
     readonly action: SandboxAction;
   } | null>(null);
+  const [connectionStage, setConnectionStage] = useState<SandboxConnectionStage | null>(null);
   const [scope, setScope] = useState<"boundly" | "all">("boundly");
   const catalog = useAtomValue(environmentCatalog.catalogValueAtom);
   const removeEnv = useAtomCommand(environmentCatalog.remove, "sandbox environment remove");
@@ -106,17 +112,23 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
   const handleConnect = useCallback(
     async (sandbox: SandboxInfo) => {
       setPendingAction({ sandboxID: sandbox.sandboxID, action: "connect" });
+      setConnectionStage(null);
       try {
         const connected = await api.connect(sandbox.sandboxID, 3600);
-        const environmentId = await connect(connected);
+        const environmentId = await connect(connected, setConnectionStage);
         setActiveEnvironmentId(environmentId);
         void navigate({ to: "/" });
-      } catch {
+      } catch (error) {
         toastManager.add(
-          stackedThreadToast({ type: "error", title: "连接沙箱失败", description: "请重试。" }),
+          stackedThreadToast({
+            type: "error",
+            title: "连接沙箱失败",
+            description: formatSandboxConnectionError(error),
+          }),
         );
       } finally {
         setPendingAction(null);
+        setConnectionStage(null);
       }
     },
     [api, connect],
@@ -285,6 +297,11 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
               pendingAction={
                 pendingAction?.sandboxID === sandbox.sandboxID ? pendingAction.action : null
               }
+              {...(pendingAction?.sandboxID === sandbox.sandboxID &&
+              pendingAction.action === "connect" &&
+              connectionStage
+                ? { pendingLabel: sandboxConnectionStageLabel(connectionStage) }
+                : {})}
               onConnect={() => void handleConnect(sandbox)}
               onPause={() => void handlePause(sandbox.sandboxID)}
               onResume={() => void handleResume(sandbox.sandboxID)}

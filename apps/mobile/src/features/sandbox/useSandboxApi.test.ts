@@ -21,10 +21,8 @@ function decodeConnectJsonEnvelope(body: ArrayBuffer) {
 }
 
 describe("resolveSandboxApiUrl", () => {
-  it("starts the T3 Server already installed in the sandbox template", () => {
-    expect(SANDBOX_T3_SERVER_COMMAND).toContain(
-      "node /home/user/t3-server/bin.mjs serve --port 8080",
-    );
+  it("starts the uploaded T3 Server bundle", () => {
+    expect(SANDBOX_T3_SERVER_COMMAND).toContain('node "$T3_SERVER_ENTRY" serve --port 8080');
   });
 
   it("marks only the selected sandbox as connecting", () => {
@@ -108,23 +106,23 @@ describe("resolveSandboxApiUrl", () => {
       "if ! cmp -s /home/user/.codex/auth.json.tmp /home/user/.codex/auth.json; then",
     );
     expect(command).toContain(
-      "  CODEX_RUNTIME_CHANGED=1\nelse\n  rm -f /home/user/.codex/auth.json.tmp\nfi",
+      "  mv /home/user/.codex/auth.json.tmp /home/user/.codex/auth.json\n  chmod 600 /home/user/.codex/auth.json\nelse\n  rm -f /home/user/.codex/auth.json.tmp\nfi",
     );
     expect(command).not.toContain(
-      "chmod 600 /home/user/.codex/auth.json\nCODEX_RUNTIME_CHANGED=1\nprintf",
+      "chmod 600 /home/user/.codex/auth.json\n  mv /home/user/.codex/auth.json.tmp",
     );
     expect(body.process.args[1]).toContain(
-      "node /home/user/t3-server/bin.mjs serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web",
+      'node "$T3_SERVER_ENTRY" serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web',
     );
     expect(body.process.args[1]).toContain("for PROC_DIR in /proc/[0-9]*; do");
     expect(body.process.args[1]).toContain(
-      '*"/home/user/t3-server/bin.mjs serve --port 8080"*) RUNNING_PID="$PID"; break ;;',
+      '*"bin.mjs serve --port 8080"*) RUNNING_PID="$PID"; break ;;',
     );
     expect(body.process.args[1]).toContain(
       'while kill -0 "$RUNNING_PID" 2>/dev/null && [ "$WAIT_ATTEMPTS" -lt 50 ]; do',
     );
     expect(body.process.args[1].indexOf('while kill -0 "$RUNNING_PID"')).toBeLessThan(
-      body.process.args[1].indexOf("nohup node /home/user/t3-server/bin.mjs serve --port 8080"),
+      body.process.args[1].indexOf('nohup node "$T3_SERVER_ENTRY" serve --port 8080'),
     );
     expect(body.process.args[1]).toContain(
       "export HOME=/home/user T3CODE_HOME=/home/user/.t3 CODEX_HOME=/home/user/.codex",
@@ -198,11 +196,13 @@ describe("resolveSandboxApiUrl", () => {
     const fetchImpl = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(new Response(null, { status: 200 }));
 
     await startT3Server({
       sandboxID: "inq318zpim5qpis3xcmj4",
       domain: "sandbox.test.example",
+      serverBundle: new Blob(["bundle"]),
       fetchImpl,
       wait: async () => {},
     });
@@ -214,6 +214,13 @@ describe("resolveSandboxApiUrl", () => {
     );
     expect(fetchImpl).toHaveBeenNthCalledWith(
       2,
+      "https://49983-inq318zpim5qpis3xcmj4.sandbox.test.example/files?path=%2Ftmp%2F.t3-server-t3-server-dist.bundle&username=user",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      3,
       "https://49983-inq318zpim5qpis3xcmj4.sandbox.test.example/process.Process/Start",
       expect.objectContaining({
         method: "POST",
@@ -237,6 +244,22 @@ describe("resolveSandboxApiUrl", () => {
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(wait).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts the server-only sandbox response as ready", async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(
+        new Response("No static directory configured and no dev URL set.", { status: 503 }),
+      );
+
+    await waitForT3Server("https://8080-sandbox.test.example", {
+      fetchImpl,
+      retryCount: 1,
+      wait: async () => {},
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
   it("accepts a successful API response with no JSON body", async () => {

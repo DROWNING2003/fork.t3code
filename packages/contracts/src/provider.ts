@@ -1,5 +1,5 @@
 import * as Schema from "effect/Schema";
-import { TrimmedNonEmptyString } from "./baseSchemas.ts";
+import { NonNegativeInt, TrimmedNonEmptyString } from "./baseSchemas.ts";
 import {
   ApprovalRequestId,
   EventId,
@@ -83,6 +83,51 @@ export const ProviderTurnStartResult = Schema.Struct({
   resumeCursor: Schema.optional(Schema.Unknown),
 });
 export type ProviderTurnStartResult = typeof ProviderTurnStartResult.Type;
+
+export const ProviderThreadGoalStatus = Schema.Literals([
+  "active",
+  "paused",
+  "blocked",
+  "usageLimited",
+  "budgetLimited",
+  "complete",
+]);
+export type ProviderThreadGoalStatus = typeof ProviderThreadGoalStatus.Type;
+
+export const ProviderThreadGoalAction = Schema.Literals(["get", "set", "clear"]);
+export type ProviderThreadGoalAction = typeof ProviderThreadGoalAction.Type;
+
+export const ProviderThreadGoal = Schema.Struct({
+  createdAt: Schema.Int,
+  objective: TrimmedNonEmptyString,
+  status: ProviderThreadGoalStatus,
+  threadId: ThreadId,
+  timeUsedSeconds: NonNegativeInt,
+  tokenBudget: Schema.optional(Schema.NullOr(NonNegativeInt)),
+  tokensUsed: NonNegativeInt,
+  updatedAt: Schema.Int,
+});
+export type ProviderThreadGoal = typeof ProviderThreadGoal.Type;
+
+export const ProviderThreadGoalInput = Schema.Struct({
+  action: ProviderThreadGoalAction,
+  threadId: ThreadId,
+  objective: Schema.optional(TrimmedNonEmptyString),
+  status: Schema.optional(ProviderThreadGoalStatus),
+  tokenBudget: Schema.optional(Schema.NullOr(NonNegativeInt)),
+});
+export type ProviderThreadGoalInput = typeof ProviderThreadGoalInput.Type;
+
+export const ProviderThreadGoalResult = Schema.Struct({
+  action: ProviderThreadGoalAction,
+  goal: Schema.NullOr(ProviderThreadGoal),
+});
+export type ProviderThreadGoalResult = typeof ProviderThreadGoalResult.Type;
+
+export class ProviderThreadGoalError extends Schema.TaggedErrorClass<ProviderThreadGoalError>()(
+  "ProviderThreadGoalError",
+  { message: TrimmedNonEmptyString },
+) {}
 
 export const ProviderInterruptTurnInput = Schema.Struct({
   threadId: ThreadId,

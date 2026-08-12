@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { getSandboxPairingUrl } from "./sandbox-client";
+import {
+  fetchSandboxT3ServerBundle,
+  getSandboxPairingUrl,
+  SANDBOX_T3_SERVER_BUNDLE_URL,
+} from "./sandbox-client";
 
 function decodeEnvdCommand(body: BodyInit | null | undefined): string {
   const buffer = body as ArrayBuffer;
@@ -11,12 +15,32 @@ function decodeEnvdCommand(body: BodyInit | null | undefined): string {
   return payload.process.args[1] ?? "";
 }
 
-describe("getSandboxPairingUrl", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("fetchSandboxT3ServerBundle", () => {
+  it("loads the current server bundle without using a browser cache", async () => {
+    let request: Request | undefined;
+    const bundle = await fetchSandboxT3ServerBundle(async (input, init) => {
+      request = new Request(new URL(String(input), "http://localhost"), init);
+      return new Response(new Blob(["bundle"]), { status: 200 });
+    });
+
+    expect(request?.url).toBe(new URL(SANDBOX_T3_SERVER_BUNDLE_URL, "http://localhost").toString());
+    expect(request?.cache).toBe("no-store");
+    expect(await bundle.text()).toBe("bundle");
   });
 
-  it("uses the template T3 Server when a legacy bundle path is supplied", async () => {
+  it("reports when the build artifact is not published", async () => {
+    await expect(
+      fetchSandboxT3ServerBundle(async () => new Response("missing", { status: 404 })),
+    ).rejects.toThrow("Build and publish t3-server-dist.bundle first");
+  });
+});
+
+describe("getSandboxPairingUrl", () => {
+  it("issues pairing codes through the uploaded runtime", async () => {
     const sandboxID = "sandbox-1";
     const domain = "sandbox.test.example";
     const serverUrl = `https://8080-${sandboxID}.${domain}`;
@@ -31,15 +55,13 @@ describe("getSandboxPairingUrl", () => {
       );
     vi.stubGlobal("fetch", fetchImpl);
 
-    const getPairingUrlWithLegacyBundlePath = getSandboxPairingUrl as unknown as (
-      ...args: readonly unknown[]
-    ) => Promise<string>;
-    await expect(
-      getPairingUrlWithLegacyBundlePath(sandboxID, domain, undefined, undefined, "/home/user/dist"),
-    ).resolves.toBe(`${serverUrl}/pair#token=fresh-token`);
+    await expect(getSandboxPairingUrl(sandboxID, domain)).resolves.toBe(
+      `${serverUrl}/pair#token=fresh-token`,
+    );
 
     const command = decodeEnvdCommand(fetchImpl.mock.calls[1]?.[1]?.body);
-    expect(command).toContain("node /home/user/t3-server/bin.mjs auth pairing create");
-    expect(command).not.toContain("/home/user/dist");
+    expect(command).toContain('T3_SERVER_RUNTIME_ENTRY="/tmp/.t3-server-runtime/bin.mjs"');
+    expect(command).toContain('node "$T3_SERVER_ENTRY" auth pairing create');
+    expect(command).not.toContain("/home/user/t3-server");
   });
 });

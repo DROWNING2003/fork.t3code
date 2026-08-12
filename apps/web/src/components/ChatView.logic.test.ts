@@ -699,6 +699,25 @@ describe("hasServerAcknowledgedLocalDispatch", () => {
     ).toBe(true);
   });
 
+  it("acknowledges a sent message before the session enters running state", () => {
+    const localDispatch = createLocalDispatchSnapshot(
+      makeThread({ latestTurn: completedTurn, session: readySession }),
+    );
+
+    expect(
+      hasServerAcknowledgedLocalDispatch({
+        localDispatch,
+        phase: "ready",
+        latestTurn: completedTurn,
+        latestUserMessageId: MessageId.make("message-new"),
+        session: readySession,
+        hasPendingApproval: false,
+        hasPendingUserInput: false,
+        threadError: null,
+      }),
+    ).toBe(true);
+  });
+
   it("acknowledges pending user interaction and errors immediately", () => {
     const localDispatch = createLocalDispatchSnapshot(makeThread());
     const common = {

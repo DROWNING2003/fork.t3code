@@ -1,6 +1,7 @@
 import type {
   SandboxConnectionInfo,
   SandboxCreateInput,
+  SandboxInjection,
   SandboxInfo,
 } from "@t3tools/shared/sandbox";
 import { DEFAULT_SANDBOX_API_URL } from "@t3tools/shared/sandbox";
@@ -102,6 +103,20 @@ export function createSandboxApi(options: SandboxClientOptions) {
       request<SandboxConnectionInfo>(`/sandboxes/${encodeURIComponent(sandboxID)}/connect`, {
         method: "POST",
         body: JSON.stringify({ timeout }),
+      }),
+
+    getInjections: (sandboxID: string): Promise<SandboxInjection[]> =>
+      request<{ injections: SandboxInjection[] }>(
+        `/sandboxes/${encodeURIComponent(sandboxID)}/injections`,
+      ).then((response) => response.injections),
+
+    updateInjections: (
+      sandboxID: string,
+      injections: ReadonlyArray<SandboxInjection>,
+    ): Promise<void> =>
+      request<void>(`/sandboxes/${encodeURIComponent(sandboxID)}/injections`, {
+        method: "PUT",
+        body: JSON.stringify({ injections }),
       }),
   };
 }

@@ -21,6 +21,8 @@ import type {
   ProviderSession,
   ProviderSessionStartInput,
   ProviderStopSessionInput,
+  ProviderThreadGoalInput,
+  ProviderThreadGoalResult,
   ThreadId,
   ProviderTurnStartResult,
 } from "@t3tools/contracts";
@@ -104,6 +106,16 @@ export interface ProviderServiceShape {
     readonly threadId: ThreadId;
     readonly numTurns: number;
   }) => Effect.Effect<void, ProviderServiceError>;
+
+  /**
+   * Read or update provider-native thread goal metadata.
+   *
+   * This is optional for compatibility with test and third-party service
+   * implementations while the Codex capability is introduced.
+   */
+  readonly setThreadGoal?: (
+    input: ProviderThreadGoalInput,
+  ) => Effect.Effect<ProviderThreadGoalResult, ProviderServiceError>;
 
   /**
    * Canonical provider runtime event stream.

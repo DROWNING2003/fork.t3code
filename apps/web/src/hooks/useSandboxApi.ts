@@ -8,10 +8,17 @@ import {
   uploadSandboxFile as sdkUploadSandboxFile,
 } from "@t3tools/sandbox-client";
 import { useCallback, useMemo } from "react";
-import { startSandboxT3Server, getSandboxPairingUrl } from "../lib/sandbox-client";
+import {
+  fetchSandboxT3ServerBundle,
+  getSandboxPairingUrl,
+  startSandboxT3Server,
+} from "../lib/sandbox-client";
 import { connectPairing } from "../connection/onboarding";
 import { useAtomCommand } from "../state/use-atom-command";
-import { getAdditionalInjections } from "../lib/sandboxCredentialStore";
+import { getConfiguredSandboxInjections } from "../lib/sandboxInjections";
+import type { SandboxConnectionStage } from "../lib/sandboxConnection";
+
+export type SandboxConnectionProgress = (stage: SandboxConnectionStage) => void;
 
 export function useSandboxApi(credentials: SandboxCredentials) {
   const api = useMemo(
@@ -25,32 +32,27 @@ export function useSandboxApi(credentials: SandboxCredentials) {
   const connectPairingEnv = useAtomCommand(connectPairing, { reportFailure: false });
 
   const connect = useCallback(
-    async (sandbox: SandboxConnectionInfo): Promise<EnvironmentId> => {
-      const additional = getAdditionalInjections();
-      const allInjections = [
-        ...additional,
-        ...(credentials.openaiApiKey
-          ? [
-              {
-                type: "openai" as const,
-                api_key: credentials.openaiApiKey,
-                base_url: credentials.openaiBaseUrl,
-              },
-            ]
-          : []),
-      ];
+    async (
+      sandbox: SandboxConnectionInfo,
+      onStage?: SandboxConnectionProgress,
+    ): Promise<EnvironmentId> => {
+      onStage?.("bundle");
+      const allInjections = getConfiguredSandboxInjections(credentials);
       const providers = detectCodexProviders(
         allInjections.flatMap((i) => {
           const url = (i as { base_url?: string }).base_url;
           return url ? [{ base_url: url }] : [];
         }),
       );
+      const serverBundle = await fetchSandboxT3ServerBundle();
+      onStage?.("server");
       await startSandboxT3Server({
         sandboxID: sandbox.sandboxID,
         domain: sandbox.domain,
         fallbackDomain: credentials.sandboxDomain,
         codexProviders: providers,
         skills: DEFAULT_SANDBOX_SKILLS,
+        serverBundle,
         ...(sandbox.envdAccessToken !== undefined
           ? { envdAccessToken: sandbox.envdAccessToken }
           : {}),
@@ -59,6 +61,7 @@ export function useSandboxApi(credentials: SandboxCredentials) {
           : {}),
       });
 
+      onStage?.("pairing");
       const pairingUrl = await getSandboxPairingUrl(
         sandbox.sandboxID,
         sandbox.domain,
@@ -66,6 +69,7 @@ export function useSandboxApi(credentials: SandboxCredentials) {
         sandbox,
       );
 
+      onStage?.("codex");
       const result = await connectPairingEnv({ pairingUrl });
       if (result._tag !== "Success") {
         throw new Error("Failed to connect to sandbox");

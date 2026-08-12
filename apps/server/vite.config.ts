@@ -7,14 +7,20 @@ import packageJson from "./package.json" with { type: "json" };
 
 const bundledPackagePrefixes = [
   "effect",
+  "@anthropic-ai/",
+  "@effect/platform-node",
+  "@effect/platform-node-shared",
+  "@ff-labs/fff-node",
+  "@opencode-ai/",
   "@pierre/diffs",
   "@t3tools/",
   "effect-acp",
   "effect-codex-app-server",
+  "yaml",
 ];
 
-/** Packages that cannot be bundled (native addons, platform-specific). */
-const externalPackages = new Set(["node-pty"]);
+/** Packages that must stay as runtime files (native addons, platform-specific). */
+const externalPackages = new Set(["@ff-labs/fff-node", "ffi-rs", "node-pty"]);
 
 export function shouldBundleCliDependency(id: string): boolean {
   if (externalPackages.has(id)) return false;

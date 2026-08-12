@@ -16,6 +16,8 @@ import type {
   ProviderSendTurnInput,
   ProviderSession,
   ProviderSessionStartInput,
+  ProviderThreadGoalInput,
+  ProviderThreadGoalResult,
   ThreadId,
   ProviderTurnStartResult,
   TurnId,
@@ -113,6 +115,16 @@ export interface ProviderAdapterShape<TError> {
     threadId: ThreadId,
     numTurns: number,
   ) => Effect.Effect<ProviderThreadSnapshot, TError>;
+
+  /**
+   * Read or update provider-native thread goal metadata.
+   *
+   * Providers that do not expose native goals can leave this capability
+   * undefined; the facade reports the operation as unsupported.
+   */
+  readonly setThreadGoal?: (
+    input: ProviderThreadGoalInput,
+  ) => Effect.Effect<ProviderThreadGoalResult, TError>;
 
   /**
    * Stop all sessions owned by this adapter.

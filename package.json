@@ -5,7 +5,7 @@
   "scripts": {
     "prepare": "node scripts/clean-tsgo-backups.mjs && effect-tsgo patch && vp config --no-agent",
     "dev": "node scripts/dev-runner.ts dev",
-    "dev:sandbox": "VITE_BOUNDLY_WEB_SURFACE=sandbox node scripts/dev-runner.ts dev",
+    "dev:sandbox": "pnpm --filter t3 build:bundle && VITE_BOUNDLY_WEB_SURFACE=sandbox node scripts/dev-runner.ts dev --home-dir .t3",
     "dev:share": "node scripts/dev-runner.ts dev --share",
     "dev:server": "node scripts/dev-runner.ts dev:server",
     "dev:web": "node scripts/dev-runner.ts dev:web",

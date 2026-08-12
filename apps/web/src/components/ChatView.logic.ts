@@ -547,14 +547,15 @@ export function hasServerAcknowledgedLocalDispatch(input: {
     input.localDispatch.latestTurnStartedAt !== (latestTurn?.startedAt ?? null) ||
     input.localDispatch.latestTurnCompletedAt !== (latestTurn?.completedAt ?? null);
 
+  // The command acknowledgment projects the sent user message before the
+  // provider necessarily transitions the session into running. Clear the
+  // local dispatch marker at that point and let the server session state
+  // control the ongoing Working indicator.
+  if (latestUserMessageChanged) {
+    return true;
+  }
+
   if (input.phase === "running") {
-    // Steering adds a user message to the current running turn without
-    // necessarily changing any of the turn timestamps. Treat that projected
-    // message as the server acknowledgment so the composer does not remain
-    // stuck in its local "Sending" state until the turn settles.
-    if (latestUserMessageChanged) {
-      return true;
-    }
     if (!latestTurnChanged) {
       return false;
     }

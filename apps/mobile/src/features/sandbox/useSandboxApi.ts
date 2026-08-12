@@ -7,10 +7,12 @@ import type {
 import {
   createSandboxApi,
   startT3Server as sdkStartT3Server,
+  fetchT3ServerBundle,
   getT3PairingUrl,
   createEnvdProcessRequest,
   buildT3StartCommand,
   buildT3PairingCommand,
+  DEFAULT_T3_SERVER_COMMAND,
   type SandboxApi,
 } from "@t3tools/sandbox-client";
 
@@ -28,8 +30,7 @@ export {
   envdFileUrl,
 } from "@t3tools/sandbox-client";
 
-export const SANDBOX_T3_SERVER_COMMAND =
-  "nohup node /home/user/t3-server/bin.mjs serve --port 8080 --host 0.0.0.0 --base-dir /home/user/.t3 --mode web";
+export const SANDBOX_T3_SERVER_COMMAND = DEFAULT_T3_SERVER_COMMAND;
 
 // Legacy test helpers
 export function createT3StartRequest(
@@ -56,7 +57,11 @@ export const DEFAULT_SANDBOX_API_URL = "https://cn-yangzhou-1-sandbox.qiniuapi.c
 interface UseSandboxApiOptions {
   readonly apiKey: string;
   readonly apiUrl?: string;
+  readonly serverBundleUrl: string;
 }
+
+export const MOBILE_T3_SERVER_BUNDLE_URL =
+  process.env.EXPO_PUBLIC_T3_SERVER_BUNDLE_URL?.trim() ?? "";
 
 export function useSandboxApi(options: UseSandboxApiOptions) {
   const api = useMemo(
@@ -71,18 +76,20 @@ export function useSandboxApi(options: UseSandboxApiOptions) {
       codexProviders?: ReadonlyArray<CodexProviderConfig>,
       skills?: ReadonlyArray<SandboxSkill>,
     ): Promise<void> => {
+      const serverBundle = await fetchT3ServerBundle(options.serverBundleUrl);
       await sdkStartT3Server({
         sandboxID: sandbox.sandboxID,
         domain: sandbox.domain,
         fallbackDomain,
         codexProviders,
         skills,
+        serverBundle,
         serverCommand: SANDBOX_T3_SERVER_COMMAND,
         envdAccessToken: sandbox.envdAccessToken,
         trafficAccessToken: sandbox.trafficAccessToken,
       });
     },
-    [],
+    [options.serverBundleUrl],
   );
 
   const getPairingUrl = useCallback(
