@@ -7,7 +7,7 @@ import type {
 import {
   createSandboxApi,
   startT3Server as sdkStartT3Server,
-  fetchT3ServerBundle,
+  T3_SERVER_BUNDLE_FILE_NAME,
   getT3PairingUrl,
   createEnvdProcessRequest,
   buildT3StartCommand,
@@ -63,6 +63,21 @@ interface UseSandboxApiOptions {
 export const MOBILE_T3_SERVER_BUNDLE_URL =
   process.env.EXPO_PUBLIC_T3_SERVER_BUNDLE_URL?.trim() ?? "";
 
+export async function downloadMobileT3ServerBundle(url: string): Promise<Blob> {
+  const normalizedUrl = url.trim();
+  if (!normalizedUrl) {
+    throw new Error("A T3 server bundle URL is required.");
+  }
+
+  const { File, Paths } = await import("expo-file-system");
+  const destination = new File(Paths.cache, T3_SERVER_BUNDLE_FILE_NAME);
+  const downloaded = await File.downloadFileAsync(normalizedUrl, destination, {
+    idempotent: true,
+  });
+
+  return downloaded;
+}
+
 export function useSandboxApi(options: UseSandboxApiOptions) {
   const api = useMemo(
     () => createSandboxApi({ apiKey: options.apiKey, apiUrl: options.apiUrl }),
@@ -72,15 +87,13 @@ export function useSandboxApi(options: UseSandboxApiOptions) {
   const startSandboxT3Server = useCallback(
     async (
       sandbox: SandboxConnectionInfo,
-      fallbackDomain?: string | null,
       codexProviders?: ReadonlyArray<CodexProviderConfig>,
       skills?: ReadonlyArray<SandboxSkill>,
     ): Promise<void> => {
-      const serverBundle = await fetchT3ServerBundle(options.serverBundleUrl);
+      const serverBundle = await downloadMobileT3ServerBundle(options.serverBundleUrl);
       await sdkStartT3Server({
         sandboxID: sandbox.sandboxID,
         domain: sandbox.domain,
-        fallbackDomain,
         codexProviders,
         skills,
         serverBundle,
@@ -95,11 +108,10 @@ export function useSandboxApi(options: UseSandboxApiOptions) {
   const getPairingUrl = useCallback(
     async (
       sandboxID: string,
-      domain: string | null | undefined,
-      fallbackDomain?: string | null,
+      domain: string,
       access?: Pick<SandboxConnectionInfo, "envdAccessToken" | "trafficAccessToken">,
     ): Promise<string> => {
-      return getT3PairingUrl(sandboxID, domain, fallbackDomain, access);
+      return getT3PairingUrl(sandboxID, domain, access);
     },
     [],
   );

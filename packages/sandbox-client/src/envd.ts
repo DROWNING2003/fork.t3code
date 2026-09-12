@@ -30,13 +30,8 @@ export function createEnvdProcessRequest(command: string): ArrayBuffer {
   return request;
 }
 
-export function envdFileUrl(
-  sandboxID: string,
-  domain: string | null | undefined,
-  fallbackDomain: string | null | undefined,
-  path: string,
-): string {
-  const envdUrl = sandboxUrl(sandboxID, domain, fallbackDomain, ENVD_PORT);
+export function envdFileUrl(sandboxID: string, domain: string, path: string): string {
+  const envdUrl = sandboxUrl(sandboxID, domain, ENVD_PORT);
   if (!envdUrl) throw new Error("The sandbox envd URL could not be resolved.");
   const url = new URL(`${envdUrl}/files`);
   url.searchParams.set("path", path);

@@ -12,6 +12,7 @@ const environment = (environmentId: string, displayUrl: string) => ({
 
 const sandbox = (sandboxID: string, state: SandboxInfo["state"]): SandboxInfo => ({
   sandboxID,
+  domain: "e2b.example.com",
   state,
   templateID: "template",
   startedAt: "2026-01-01T00:00:00.000Z",

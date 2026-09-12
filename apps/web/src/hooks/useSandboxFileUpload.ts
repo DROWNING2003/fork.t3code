@@ -11,22 +11,11 @@ const SANDBOX_CONNECTION_HOST_PATTERN = /^\d+-([a-z0-9-]+)\.(.+)$/i;
 
 export interface SandboxConnectionTarget {
   readonly sandboxID: string;
-  readonly domain: string;
-}
-
-export function enrichSandboxInfoWithConnectionTarget<T extends Pick<SandboxInfo, "domain">>(
-  sandbox: T,
-  target: SandboxConnectionTarget,
-): T & { readonly domain: string } {
-  return sandbox.domain?.trim()
-    ? (sandbox as T & { readonly domain: string })
-    : { ...sandbox, domain: target.domain };
 }
 
 export function mergeConnectedSandboxInfo(
   previous: SandboxInfo,
   connected: SandboxConnectionInfo,
-  target: SandboxConnectionTarget,
 ): SandboxInfo {
   return {
     ...previous,
@@ -34,7 +23,6 @@ export function mergeConnectedSandboxInfo(
     // The connect endpoint resumes paused sandboxes, but its Sandbox response
     // does not include the state field from SandboxDetail.
     state: "running",
-    domain: connected.domain?.trim() ? connected.domain : target.domain,
   };
 }
 
@@ -50,7 +38,7 @@ export function parseSandboxConnectionTarget(
     const hostname = new URL(httpBaseUrl).hostname.replace(/\.$/, "");
     const match = SANDBOX_CONNECTION_HOST_PATTERN.exec(hostname);
     if (!match?.[1] || !match[2]) return null;
-    return { sandboxID: match[1], domain: match[2] };
+    return { sandboxID: match[1] };
   } catch {
     return null;
   }
@@ -95,7 +83,7 @@ export function useSandboxFileUpload(environmentId: EnvironmentId): SandboxFileU
           setError("当前工作区对应的沙箱不在可用列表中。");
           return;
         }
-        setSandbox(enrichSandboxInfoWithConnectionTarget(listed, target));
+        setSandbox(listed);
       })
       .catch((cause) => {
         if (!cancelled) {
@@ -126,7 +114,7 @@ export function useSandboxFileUpload(environmentId: EnvironmentId): SandboxFileU
       let uploadSandbox = sandbox;
       if (!sandbox.envdAccessToken?.trim() || !isSandboxUploadAllowed(sandbox)) {
         const connected = await api.connect(sandbox.sandboxID, 3600);
-        uploadSandbox = mergeConnectedSandboxInfo(sandbox, connected, target);
+        uploadSandbox = mergeConnectedSandboxInfo(sandbox, connected);
         setSandbox(uploadSandbox);
       }
       if (!isSandboxUploadAllowed(uploadSandbox)) {

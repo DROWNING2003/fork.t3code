@@ -68,7 +68,7 @@ const resolveEnvironmentPortTarget = (
   const path = target.path?.startsWith("/") ? target.path : `/${target.path ?? ""}`;
   const sandboxMatch = SANDBOX_PROXY_HOSTNAME_PATTERN.exec(environmentUrl.hostname);
   if (sandboxMatch) {
-    const sandboxBaseUrl = sandboxUrl(sandboxMatch[1]!, sandboxMatch[2]!, undefined, target.port);
+    const sandboxBaseUrl = sandboxUrl(sandboxMatch[1]!, sandboxMatch[2]!, target.port);
     if (!sandboxBaseUrl) {
       throw new Error("This sandbox preview URL could not be resolved.");
     }

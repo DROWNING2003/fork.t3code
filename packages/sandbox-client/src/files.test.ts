@@ -10,7 +10,6 @@ describe("sandbox file upload", () => {
     await uploadSandboxFile({
       sandboxID: "sandbox-1",
       domain: "sandbox.example.com",
-      fallbackDomain: null,
       path: "/home/user/project/hello.txt",
       file,
       fileName: "hello.txt",
@@ -50,5 +49,38 @@ describe("sandbox file upload", () => {
         fetchImpl: async () => new Response("permission denied", { status: 403 }),
       }),
     ).rejects.toThrow("403 permission denied");
+  });
+
+  it("passes Blob-compatible file parts through to the FormData upload API", async () => {
+    const nativeFile = {
+      uri: "file:///cache/t3-server-dist.bundle",
+      name: "t3-server-dist.bundle",
+      type: "application/gzip",
+      bytes: async () => new Uint8Array([98, 117, 110, 100, 108, 101]),
+    } as unknown as Blob;
+    const originalFormData = globalThis.FormData;
+    const appendCalls: unknown[][] = [];
+
+    class NativeFormData {
+      append(...args: unknown[]) {
+        appendCalls.push(args);
+      }
+    }
+
+    globalThis.FormData = NativeFormData as unknown as typeof FormData;
+    try {
+      await uploadSandboxFile({
+        sandboxID: "sandbox-1",
+        domain: "sandbox.example.com",
+        path: "/tmp/t3-server-dist.bundle",
+        file: nativeFile,
+        fileName: "t3-server-dist.bundle",
+        fetchImpl: async () => new Response(null, { status: 200 }),
+      });
+    } finally {
+      globalThis.FormData = originalFormData;
+    }
+
+    expect(appendCalls).toEqual([["file", nativeFile, "t3-server-dist.bundle"]]);
   });
 });

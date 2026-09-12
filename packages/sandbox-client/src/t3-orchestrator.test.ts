@@ -40,13 +40,12 @@ describe("sandbox T3 runtime selection", () => {
 });
 
 describe("sandbox T3 orchestration URLs", () => {
-  it("starts envd through the fallback domain when the sandbox domain is empty", async () => {
+  it("starts envd through the sandbox domain returned by the API", async () => {
     const requests: string[] = [];
 
     await startT3Server({
       sandboxID: "sandbox-1",
-      domain: "",
-      fallbackDomain: "sandbox.example.com",
+      domain: "sandbox.example.com",
       serverBundle: new Blob(["bundle"]),
       fetchImpl: async (input) => {
         requests.push(String(input));
@@ -62,11 +61,11 @@ describe("sandbox T3 orchestration URLs", () => {
     ]);
   });
 
-  it("reads a pairing URL through the fallback-domain envd endpoint", async () => {
+  it("reads a pairing URL through the sandbox-domain envd endpoint", async () => {
     const requests: string[] = [];
     const serverUrl = "https://8080-sandbox-1.sandbox.example.com";
 
-    const pairingUrl = await getT3PairingUrl("sandbox-1", "", "sandbox.example.com", undefined, {
+    const pairingUrl = await getT3PairingUrl("sandbox-1", "sandbox.example.com", undefined, {
       fetchImpl: async (input) => {
         const url = String(input);
         requests.push(url);
@@ -97,7 +96,7 @@ describe("sandbox T3 orchestration URLs", () => {
     const serverUrl = "https://8080-sandbox-1.sandbox.example.com";
 
     await expect(
-      getT3PairingUrl("sandbox-1", "sandbox.example.com", undefined, undefined, {
+      getT3PairingUrl("sandbox-1", "sandbox.example.com", undefined, {
         fetchImpl: async (input) => {
           const url = String(input);
           if (url === serverUrl) return new Response(null, { status: 502 });

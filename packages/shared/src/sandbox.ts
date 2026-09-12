@@ -2,7 +2,7 @@ export interface SandboxInfo {
   sandboxID: string;
   templateID: string;
   alias?: string | null;
-  domain?: string | null;
+  domain: string;
   state: "running" | "paused";
   startedAt: string;
   endAt: string;
@@ -18,7 +18,7 @@ export interface SandboxInfo {
 /** Details returned by the connect endpoint for envd and proxy access. */
 export interface SandboxConnectionInfo {
   sandboxID: string;
-  domain?: string | null;
+  domain: string;
   envdAccessToken?: string;
   trafficAccessToken?: string | null;
 }
@@ -294,7 +294,6 @@ export interface SandboxListResponse {
 }
 
 export const DEFAULT_SANDBOX_API_URL = "https://cn-yangzhou-1-sandbox.qiniuapi.com";
-export const DEFAULT_SANDBOX_DOMAIN = "";
 export const DEFAULT_OPENAI_BASE_URL = "https://api.fenno.ai";
 export const DEFAULT_TEMPLATE_ID = "usrrhp4zsns5yyithi8a";
 export const BOUNDLY_SANDBOX_METADATA = { app: "boundly" } as const;
@@ -319,14 +318,13 @@ export function isSandboxUrl(url: string): boolean {
 export function sandboxUrl(
   sandboxID: string,
   domain: string | null | undefined,
-  fallbackDomain?: string | null,
   port = DEFAULT_T3_PORT,
 ): string | null {
   if (!/^[a-z0-9-]+$/i.test(sandboxID) || !Number.isInteger(port) || port < 1 || port > 65_535) {
     return null;
   }
 
-  const resolvedDomain = (domain || fallbackDomain)
+  const resolvedDomain = domain
     ?.trim()
     .replace(/^https?:\/\//, "")
     .replace(/\/+$/, "");

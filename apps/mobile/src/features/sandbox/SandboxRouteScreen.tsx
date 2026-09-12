@@ -169,16 +169,10 @@ export function SandboxRouteScreen() {
             : []),
           ...additional.map((i) => ({ base_url: i.base_url })),
         ]);
-        await startSandboxT3Server(
-          connectedSandbox,
-          credentials.sandboxDomain,
-          providers,
-          DEFAULT_SANDBOX_SKILLS,
-        );
+        await startSandboxT3Server(connectedSandbox, providers, DEFAULT_SANDBOX_SKILLS);
         const pairingUrl = await getPairingUrl(
           connectedSandbox.sandboxID,
           connectedSandbox.domain,
-          credentials.sandboxDomain,
           connectedSandbox,
         );
         const result = await onConnectPress(pairingUrl);
@@ -203,7 +197,6 @@ export function SandboxRouteScreen() {
       connectSandbox,
       credentials.openaiApiKey,
       credentials.openaiBaseUrl,
-      credentials.sandboxDomain,
       getPairingUrl,
       navigation,
       onConnectPress,
@@ -282,7 +275,6 @@ export function SandboxRouteScreen() {
                 <SandboxListItem
                   key={sb.sandboxID}
                   sandbox={sb}
-                  fallbackDomain={credentials.sandboxDomain}
                   iconColor={iconColor}
                   isConnecting={isSandboxConnecting(sb.sandboxID, connecting)}
                   isFirst={i === 0}
@@ -315,7 +307,6 @@ export function SandboxRouteScreen() {
 
 function SandboxListItem({
   sandbox: sb,
-  fallbackDomain,
   iconColor,
   isConnecting,
   isFirst,
@@ -326,7 +317,6 @@ function SandboxListItem({
   onDelete,
 }: {
   readonly sandbox: SandboxInfo;
-  readonly fallbackDomain: string | null | undefined;
   readonly iconColor: ColorValue;
   readonly isConnecting: boolean;
   readonly isFirst: boolean;
@@ -355,7 +345,7 @@ function SandboxListItem({
         )}
       </View>
       <Text className="text-xs text-foreground-muted">
-        {sandboxUrl(sb.sandboxID, sb.domain, fallbackDomain) ?? "Public domain unavailable"}
+        {sandboxUrl(sb.sandboxID, sb.domain) ?? "Public domain unavailable"}
       </Text>
       <View collapsable={false} className="flex-row gap-2 mt-1">
         {sb.state === "running" ? (

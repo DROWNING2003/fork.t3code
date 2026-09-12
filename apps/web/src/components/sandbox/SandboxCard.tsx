@@ -17,7 +17,6 @@ import { Card, CardFooter, CardHeader, CardPanel, CardTitle } from "../ui/card";
 
 interface Props {
   readonly sandbox: SandboxInfo;
-  readonly fallbackDomain?: string;
   readonly pendingAction: SandboxAction | null;
   readonly pendingLabel?: string;
   readonly onConnect: () => void;
@@ -31,7 +30,6 @@ export type SandboxAction = "connect" | "pause" | "resume" | "refresh" | "delete
 
 export function SandboxCard({
   sandbox,
-  fallbackDomain,
   pendingAction,
   pendingLabel,
   onConnect,
@@ -56,8 +54,7 @@ export function SandboxCard({
   const isUrgent = msLeft > 0 && minutesLeft < 30;
   const isRunning = sandbox.state === "running";
   const displayName = sandbox.alias || `沙箱 ${sandbox.sandboxID.slice(0, 8)}`;
-  const displayDomain = sandbox.domain || fallbackDomain;
-  const displayUrl = sandboxUrl(sandbox.sandboxID, displayDomain);
+  const displayUrl = sandboxUrl(sandbox.sandboxID, sandbox.domain);
 
   return (
     <Card className="overflow-hidden rounded-xl border-border/70 bg-card shadow-none transition-[border-color,background-color] duration-150 ease-out hover:border-border">
@@ -140,7 +137,7 @@ export function SandboxCard({
               rel="noreferrer"
             >
               <ExternalLinkIcon className="size-3 shrink-0 opacity-60" />
-              <span className="truncate font-mono">{displayDomain || "等待域名"}</span>
+              <span className="truncate font-mono">{sandbox.domain}</span>
             </a>
           </div>
         </div>

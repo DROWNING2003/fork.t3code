@@ -34,14 +34,21 @@ Build and run the local iOS dev client:
 vp run ios:dev
 ```
 
-If your Xcode account only has a Personal Team, use a bundle identifier you control and opt into the
-reduced-capability local build. Personal Team builds omit the widget and share extensions, push
-entitlement, and native Sign in with Apple entitlement; builds without this opt-in are unchanged.
+The local development command uses the reduced-capability build so it can run in the iOS Simulator
+without an Apple Developer account. It uses the `t3code-dev` URL scheme and omits the widget/share
+extensions, push entitlement, Associated Domains, and native Sign in with Apple entitlement.
+
+To use the local Qiniu Sandbox create/connect flow, keep this bundle server running in a second
+terminal:
 
 ```bash
-T3CODE_IOS_PERSONAL_TEAM=1 \
-T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code.dev \
-vp run ios:dev
+vp run bundle:dev
+```
+
+To build the full T3 Tools development target with its Apple capabilities, use:
+
+```bash
+vp run ios:dev:team
 ```
 
 Build and install a self-contained Release app that does not need Metro:

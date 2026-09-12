@@ -22,7 +22,6 @@ export type SandboxCreateInput = SDKCreateInput;
 export interface SandboxCredentials {
   e2bApiKey: string;
   e2bApiUrl: string;
-  sandboxDomain: string;
   openaiApiKey: string;
   openaiBaseUrl: string;
   templateID: string;
@@ -36,11 +35,10 @@ export const DEFAULT_T3_PORT = 8080;
 export function mergeSandboxCredentials(
   current: Partial<SandboxCredentials>,
   updates: Pick<SandboxCredentials, "e2bApiKey" | "e2bApiUrl" | "templateID"> &
-    Partial<Pick<SandboxCredentials, "sandboxDomain" | "openaiApiKey" | "openaiBaseUrl">>,
+    Partial<Pick<SandboxCredentials, "openaiApiKey" | "openaiBaseUrl">>,
 ): SandboxCredentials {
   return {
     ...updates,
-    sandboxDomain: updates.sandboxDomain ?? current.sandboxDomain ?? "",
     openaiApiKey: updates.openaiApiKey ?? current.openaiApiKey ?? "",
     openaiBaseUrl:
       updates.openaiBaseUrl !== undefined
@@ -59,14 +57,13 @@ export function isSandboxConnecting(
 export function sandboxUrl(
   sandboxID: string,
   domain: string | null | undefined,
-  fallbackDomain?: string | null,
   port = DEFAULT_T3_PORT,
 ): string | null {
   if (!/^[a-z0-9-]+$/i.test(sandboxID) || !Number.isInteger(port) || port < 1 || port > 65_535) {
     return null;
   }
 
-  const resolvedDomain = (domain || fallbackDomain)
+  const resolvedDomain = domain
     ?.trim()
     .replace(/^https?:\/\//, "")
     .replace(/\/+$/, "");

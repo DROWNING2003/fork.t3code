@@ -293,7 +293,6 @@ export function SandboxList({ onNavigateToSettings, onNavigateToCreate }: Props)
             <SandboxCard
               key={sandbox.sandboxID}
               sandbox={sandbox}
-              fallbackDomain={creds.credentials.sandboxDomain}
               pendingAction={
                 pendingAction?.sandboxID === sandbox.sandboxID ? pendingAction.action : null
               }

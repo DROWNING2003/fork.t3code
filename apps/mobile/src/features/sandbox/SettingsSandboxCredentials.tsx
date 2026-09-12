@@ -85,7 +85,6 @@ export function SettingsSandboxCredentials() {
 
   const [e2bKey, setE2bKey] = useState(credentials.e2bApiKey ?? "");
   const [e2bApiUrl, setE2bApiUrl] = useState(credentials.e2bApiUrl ?? "");
-  const [sandboxDomain, setSandboxDomain] = useState(credentials.sandboxDomain ?? "");
   const [openaiApiKey, setOpenaiApiKey] = useState(credentials.openaiApiKey ?? "");
   const [openaiBaseUrl, setOpenaiBaseUrl] = useState(
     credentials.openaiBaseUrl || DEFAULT_OPENAI_BASE_URL,
@@ -100,7 +99,6 @@ export function SettingsSandboxCredentials() {
     initialized.current = true;
     setE2bKey(credentials.e2bApiKey ?? "");
     setE2bApiUrl(credentials.e2bApiUrl ?? "");
-    setSandboxDomain(credentials.sandboxDomain ?? "");
     setOpenaiApiKey(credentials.openaiApiKey ?? "");
     setOpenaiBaseUrl(credentials.openaiBaseUrl || DEFAULT_OPENAI_BASE_URL);
     setTemplateID(credentials.templateID || DEFAULT_TEMPLATE_ID);
@@ -146,7 +144,6 @@ export function SettingsSandboxCredentials() {
         mergeSandboxCredentials(credentials, {
           e2bApiKey: e2bKey.trim(),
           e2bApiUrl: e2bApiUrl.trim(),
-          sandboxDomain: sandboxDomain.trim(),
           openaiApiKey: openaiApiKey.trim(),
           openaiBaseUrl: openaiBaseUrl.trim(),
           templateID: templateID.trim() || DEFAULT_TEMPLATE_ID,
@@ -165,7 +162,6 @@ export function SettingsSandboxCredentials() {
   }, [
     e2bKey,
     e2bApiUrl,
-    sandboxDomain,
     openaiApiKey,
     openaiBaseUrl,
     templateID,
@@ -233,20 +229,6 @@ export function SettingsSandboxCredentials() {
                 placeholder={DEFAULT_TEMPLATE_ID}
                 value={templateID}
                 onChangeText={setTemplateID}
-                className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
-              />
-            </View>
-            <View collapsable={false} className="gap-1.5">
-              <Text className="text-2xs font-t3-bold tracking-[0.8px] uppercase text-foreground-muted">
-                Public Sandbox Domain
-              </Text>
-              <TextInput
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                placeholder="sandbox.example.com"
-                value={sandboxDomain}
-                onChangeText={setSandboxDomain}
                 className="rounded-[14px] border border-input-border bg-input px-4 py-3.5 text-base text-foreground"
               />
             </View>

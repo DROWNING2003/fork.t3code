@@ -58,8 +58,7 @@ export interface InjectionStore {
 }
 
 export interface T3StartOptions extends EnvdAccess {
-  readonly domain: string | null | undefined;
-  readonly fallbackDomain?: string | null;
+  readonly domain: string;
   /** The build-time server bundle to install before starting T3. */
   readonly serverBundle: Blob;
   readonly codexProviders?: ReadonlyArray<CodexProviderConfig>;

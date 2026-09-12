@@ -17,9 +17,8 @@ export async function fetchSandboxT3ServerBundle(fetchImpl: typeof fetch = fetch
 
 export async function getSandboxPairingUrl(
   sandboxID: string,
-  domain: string | null | undefined,
-  fallbackDomain?: string | null,
+  domain: string,
   access?: Pick<SandboxInfo, "envdAccessToken" | "trafficAccessToken">,
 ): Promise<string> {
-  return getT3PairingUrl(sandboxID, domain, fallbackDomain, access);
+  return getT3PairingUrl(sandboxID, domain, access);
 }

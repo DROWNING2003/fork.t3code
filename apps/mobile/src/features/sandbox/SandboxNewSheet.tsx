@@ -43,7 +43,6 @@ export function SandboxNewSheet() {
   const [mountPath, setMountPath] = useState("");
   const [name, setName] = useState("");
   const [createdSandboxID, setCreatedSandboxID] = useState<string | null>(null);
-  const [createdSandboxDomain, setCreatedSandboxDomain] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,7 +105,6 @@ export function SandboxNewSheet() {
         });
         sandboxID = sandbox.sandboxID;
         setCreatedSandboxID(sandboxID);
-        setCreatedSandboxDomain(sandbox.domain ?? null);
       }
 
       // Wait for the sandbox service to boot and get a pairing URL.
@@ -118,16 +116,10 @@ export function SandboxNewSheet() {
           return url ? [{ base_url: url }] : [];
         }),
       );
-      await api.startSandboxT3Server(
-        connectedSandbox,
-        credentials.sandboxDomain,
-        providers,
-        DEFAULT_SANDBOX_SKILLS,
-      );
+      await api.startSandboxT3Server(connectedSandbox, providers, DEFAULT_SANDBOX_SKILLS);
       const pairingUrl = await api.getPairingUrl(
         connectedSandbox.sandboxID,
-        connectedSandbox.domain ?? createdSandboxDomain,
-        credentials.sandboxDomain,
+        connectedSandbox.domain,
         connectedSandbox,
       );
       const result = await onConnectPress(pairingUrl);
@@ -146,15 +138,7 @@ export function SandboxNewSheet() {
     } finally {
       setCreating(false);
     }
-  }, [
-    timeoutHours,
-    githubRepo,
-    credentials,
-    api,
-    navigation,
-    createdSandboxID,
-    createdSandboxDomain,
-  ]);
+  }, [timeoutHours, githubRepo, credentials, api, navigation, createdSandboxID]);
 
   return (
     <View collapsable={false} className="flex-1 bg-sheet">

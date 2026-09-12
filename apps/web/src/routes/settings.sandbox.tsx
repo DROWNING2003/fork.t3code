@@ -144,7 +144,6 @@ function SandboxCredentialsSettings() {
       const creds: SandboxCredentials = {
         e2bApiKey: e2bKey.trim(),
         e2bApiUrl: e2bApiUrl.trim(),
-        sandboxDomain: credentials.sandboxDomain,
         openaiApiKey: credentials.openaiApiKey,
         openaiBaseUrl: credentials.openaiBaseUrl,
         templateID: templateID.trim(),

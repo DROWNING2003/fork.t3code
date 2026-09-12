@@ -46,7 +46,6 @@ describe("sandbox injection editor logic", () => {
     const credentials = {
       e2bApiKey: "e2b-key",
       e2bApiUrl: "https://sandbox.example.com",
-      sandboxDomain: "",
       openaiApiKey: null,
       openaiBaseUrl: null,
       templateID: "template-id",

@@ -4,8 +4,7 @@ import type { EnvdAccess } from "./types";
 export const ENVD_FILE_UPLOAD_TIMEOUT_MS = 60_000;
 
 export interface SandboxFileUploadOptions extends EnvdAccess {
-  readonly domain: string | null | undefined;
-  readonly fallbackDomain?: string | null;
+  readonly domain: string;
   readonly path: string;
   readonly file: Blob;
   readonly fileName: string;
@@ -19,12 +18,7 @@ export async function uploadSandboxFile(options: SandboxFileUploadOptions): Prom
     throw new Error("A file name is required for sandbox upload.");
   }
 
-  const fileUrl = envdFileUrl(
-    options.sandboxID,
-    options.domain,
-    options.fallbackDomain,
-    options.path,
-  );
+  const fileUrl = envdFileUrl(options.sandboxID, options.domain, options.path);
   const headers = envdHeaders(options);
   delete headers["Content-Type"];
 

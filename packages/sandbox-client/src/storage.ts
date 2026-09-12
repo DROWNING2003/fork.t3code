@@ -6,7 +6,6 @@ export function createLocalStorageCredentialStore(prefix = "sandbox_"): Credenti
   const keys = {
     e2bApiKey: `${prefix}e2b_api_key`,
     e2bApiUrl: `${prefix}e2b_api_url`,
-    sandboxDomain: `${prefix}public_domain`,
     openaiApiKey: `${prefix}openai_api_key`,
     openaiBaseUrl: `${prefix}openai_base_url`,
     templateID: `${prefix}template_id`,

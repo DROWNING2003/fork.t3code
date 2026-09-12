@@ -6,6 +6,7 @@ import {
   buildSandboxCreateBody,
   createT3PairingRequest,
   createT3StartRequest,
+  downloadMobileT3ServerBundle,
   envdHeaders,
   parseSandboxApiResponse,
   readPairingUrlFromJson,
@@ -15,12 +16,45 @@ import {
 } from "./useSandboxApi";
 import { isSandboxConnecting, sandboxUrl } from "./sandboxTypes";
 
+vi.mock("expo-file-system", () => {
+  class MockFile {
+    static downloadFileAsync = vi.fn(async () => {
+      const file = new Blob(["bundle"], { type: "application/gzip" });
+      Object.defineProperty(file, "uri", { value: "file:///cache/t3-server-dist.bundle" });
+      return file;
+    });
+    readonly uri: string;
+
+    constructor(...parts: Array<string | { readonly uri: string }>) {
+      this.uri = parts
+        .map((part) => (typeof part === "string" ? part : part.uri))
+        .join("/")
+        .replace("file:////", "file:///");
+    }
+  }
+
+  return {
+    File: MockFile,
+    Paths: { cache: { uri: "file:///cache" } },
+  };
+});
+
 function decodeConnectJsonEnvelope(body: ArrayBuffer) {
   const length = new DataView(body).getUint32(1);
   return JSON.parse(new TextDecoder().decode(new Uint8Array(body, 5, length)));
 }
 
 describe("resolveSandboxApiUrl", () => {
+  it("downloads the mobile bundle as a Blob-compatible local file", async () => {
+    const file = await downloadMobileT3ServerBundle("http://127.0.0.1:5734/t3-server-dist.bundle");
+
+    expect(file).toBeInstanceOf(Blob);
+    expect(file).toMatchObject({
+      uri: "file:///cache/t3-server-dist.bundle",
+      type: "application/gzip",
+    });
+  });
+
   it("starts the uploaded T3 Server bundle", () => {
     expect(SANDBOX_T3_SERVER_COMMAND).toContain('node "$T3_SERVER_ENTRY" serve --port 8080');
   });
@@ -65,19 +99,19 @@ describe("resolveSandboxApiUrl", () => {
     expect(resolveSandboxApiUrl("")).toBe(DEFAULT_SANDBOX_API_URL);
   });
 
-  it("uses a configured public sandbox domain when the API omits one", () => {
-    expect(sandboxUrl("inq318zpim5qpis3xcmj4", null, "sandbox.test.example")).toBe(
+  it("uses the public domain returned by the sandbox API", () => {
+    expect(sandboxUrl("inq318zpim5qpis3xcmj4", "sandbox.test.example")).toBe(
       "https://8080-inq318zpim5qpis3xcmj4.sandbox.test.example",
     );
   });
 
-  it("does not invent a Qiniu public domain for a custom API server", () => {
+  it("does not resolve a URL when the sandbox API omits its domain", () => {
     expect(sandboxUrl("inq318zpim5qpis3xcmj4", null)).toBeNull();
   });
 
   it("rejects a public domain containing a path or credentials", () => {
-    expect(sandboxUrl("inq318zpim5qpis3xcmj4", null, "sandbox.test.example/files")).toBeNull();
-    expect(sandboxUrl("inq318zpim5qpis3xcmj4", null, "user@sandbox.test.example")).toBeNull();
+    expect(sandboxUrl("inq318zpim5qpis3xcmj4", "sandbox.test.example/files")).toBeNull();
+    expect(sandboxUrl("inq318zpim5qpis3xcmj4", "user@sandbox.test.example")).toBeNull();
   });
 
   it("rejects a sandbox ID that could alter the envd hostname", () => {

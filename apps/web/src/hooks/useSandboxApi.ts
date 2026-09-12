@@ -49,7 +49,6 @@ export function useSandboxApi(credentials: SandboxCredentials) {
       await startSandboxT3Server({
         sandboxID: sandbox.sandboxID,
         domain: sandbox.domain,
-        fallbackDomain: credentials.sandboxDomain,
         codexProviders: providers,
         skills: DEFAULT_SANDBOX_SKILLS,
         serverBundle,
@@ -62,12 +61,7 @@ export function useSandboxApi(credentials: SandboxCredentials) {
       });
 
       onStage?.("pairing");
-      const pairingUrl = await getSandboxPairingUrl(
-        sandbox.sandboxID,
-        sandbox.domain,
-        credentials.sandboxDomain,
-        sandbox,
-      );
+      const pairingUrl = await getSandboxPairingUrl(sandbox.sandboxID, sandbox.domain, sandbox);
 
       onStage?.("codex");
       const result = await connectPairingEnv({ pairingUrl });
@@ -89,7 +83,6 @@ export function useSandboxApi(credentials: SandboxCredentials) {
       await sdkUploadSandboxFile({
         sandboxID: sandbox.sandboxID,
         domain: sandbox.domain,
-        fallbackDomain: credentials.sandboxDomain,
         path: destinationPath,
         file,
         fileName,

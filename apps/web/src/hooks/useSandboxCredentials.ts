@@ -10,7 +10,6 @@ import { sandboxCredentialStore } from "../lib/sandboxCredentialStore";
 export const DEFAULT_CREDENTIALS: SandboxCredentials = {
   e2bApiKey: "",
   e2bApiUrl: DEFAULT_SANDBOX_API_URL,
-  sandboxDomain: "",
   openaiApiKey: "",
   openaiBaseUrl: DEFAULT_OPENAI_BASE_URL,
   templateID: DEFAULT_TEMPLATE_ID,

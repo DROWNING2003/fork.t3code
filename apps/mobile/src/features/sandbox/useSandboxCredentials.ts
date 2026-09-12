@@ -7,7 +7,6 @@ import type { SandboxCredentials } from "./sandboxTypes";
 const KEYS = {
   e2bApiKey: "sandbox_e2b_api_key",
   e2bApiUrl: "sandbox_e2b_api_url",
-  sandboxDomain: "sandbox_public_domain",
   openaiApiKey: "sandbox_openai_api_key",
   openaiBaseUrl: "sandbox_openai_base_url",
   templateID: "sandbox_template_id",
@@ -40,15 +39,13 @@ export function useSandboxCredentials() {
     Promise.all([
       SecureStore.getItemAsync(KEYS.e2bApiKey),
       SecureStore.getItemAsync(KEYS.e2bApiUrl),
-      SecureStore.getItemAsync(KEYS.sandboxDomain),
       SecureStore.getItemAsync(KEYS.openaiApiKey),
       SecureStore.getItemAsync(KEYS.openaiBaseUrl),
       SecureStore.getItemAsync(KEYS.templateID),
-    ]).then(([e2bApiKey, e2bApiUrl, sandboxDomain, openaiApiKey, openaiBaseUrl, templateID]) => {
+    ]).then(([e2bApiKey, e2bApiUrl, openaiApiKey, openaiBaseUrl, templateID]) => {
       setCredentials({
         e2bApiKey: e2bApiKey ?? "",
         e2bApiUrl: e2bApiUrl ?? "",
-        sandboxDomain: sandboxDomain ?? "",
         openaiApiKey: openaiApiKey ?? "",
         openaiBaseUrl: openaiBaseUrl ?? DEFAULT_OPENAI_BASE_URL,
         templateID: templateID ?? DEFAULT_TEMPLATE_ID,
@@ -66,11 +63,6 @@ export function useSandboxCredentials() {
     if (input.e2bApiUrl !== undefined) {
       if (input.e2bApiUrl) updates.push(SecureStore.setItemAsync(KEYS.e2bApiUrl, input.e2bApiUrl));
       else updates.push(SecureStore.deleteItemAsync(KEYS.e2bApiUrl));
-    }
-    if (input.sandboxDomain !== undefined) {
-      if (input.sandboxDomain)
-        updates.push(SecureStore.setItemAsync(KEYS.sandboxDomain, input.sandboxDomain));
-      else updates.push(SecureStore.deleteItemAsync(KEYS.sandboxDomain));
     }
     if (input.openaiApiKey !== undefined) {
       if (input.openaiApiKey)

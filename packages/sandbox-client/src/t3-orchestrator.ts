@@ -230,7 +230,7 @@ export function buildT3StartCommand(
 }
 
 export async function startT3Server(options: T3StartOptions): Promise<void> {
-  const envdBase = sandboxUrl(options.sandboxID, options.domain, options.fallbackDomain, 49983);
+  const envdBase = sandboxUrl(options.sandboxID, options.domain, 49983);
   if (!envdBase) throw new Error("The sandbox envd URL could not be resolved.");
 
   const fetchImpl = options.fetchImpl ?? fetch;
@@ -243,7 +243,6 @@ export async function startT3Server(options: T3StartOptions): Promise<void> {
   await uploadSandboxFile({
     sandboxID: options.sandboxID,
     domain: options.domain,
-    fallbackDomain: options.fallbackDomain ?? null,
     path: T3_SERVER_BUNDLE_PATH,
     file: options.serverBundle,
     fileName: T3_SERVER_BUNDLE_FILE_NAME,
@@ -297,14 +296,13 @@ export async function waitForT3Server(
 
 async function readT3StartupLog(
   sandboxID: string,
-  domain: string | null | undefined,
-  fallbackDomain: string | null | undefined,
+  domain: string,
   headers: Record<string, string>,
   fetchImpl: typeof fetch,
 ): Promise<string | null> {
   try {
     const response = await envdFileRead(
-      envdFileUrl(sandboxID, domain, fallbackDomain, T3_STARTUP_LOG_PATH),
+      envdFileUrl(sandboxID, domain, T3_STARTUP_LOG_PATH),
       headers,
       { fetchImpl, retryCount: 1 },
     );
@@ -351,8 +349,7 @@ export function readPairingUrlFromJson(value: string, serverUrl: string): string
 
 export async function getT3PairingUrl(
   sandboxID: string,
-  domain: string | null | undefined,
-  fallbackDomain: string | null | undefined,
+  domain: string,
   access?: { readonly envdAccessToken?: string; readonly trafficAccessToken?: string | null },
   options?: {
     readonly fetchImpl?: typeof fetch;
@@ -364,16 +361,16 @@ export async function getT3PairingUrl(
     readonly wait?: (ms: number) => Promise<void>;
   },
 ): Promise<string> {
-  const serverUrl = sandboxUrl(sandboxID, domain, fallbackDomain, DEFAULT_T3_PORT);
+  const serverUrl = sandboxUrl(sandboxID, domain, DEFAULT_T3_PORT);
   if (!serverUrl) throw new Error("Could not resolve the sandbox service URL.");
 
-  const envdBase = sandboxUrl(sandboxID, domain, fallbackDomain, 49983);
+  const envdBase = sandboxUrl(sandboxID, domain, 49983);
   if (!envdBase) throw new Error("The sandbox envd URL could not be resolved.");
 
   const headers = envdHeaders({ sandboxID, ...access });
   const fetchImpl = options?.fetchImpl ?? fetch;
 
-  const fileUrl = envdFileUrl(sandboxID, domain, fallbackDomain, MOBILE_PAIRING_PATH);
+  const fileUrl = envdFileUrl(sandboxID, domain, MOBILE_PAIRING_PATH);
   try {
     await waitForT3Server(serverUrl, {
       fetchImpl,
@@ -384,13 +381,7 @@ export async function getT3PairingUrl(
       ...(options?.wait !== undefined ? { wait: options.wait } : {}),
     });
   } catch (error) {
-    const startupLog = await readT3StartupLog(
-      sandboxID,
-      domain,
-      fallbackDomain,
-      headers,
-      fetchImpl,
-    );
+    const startupLog = await readT3StartupLog(sandboxID, domain, headers, fetchImpl);
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(startupLog ? `${message}. T3 startup log: ${startupLog}` : message);
   }
