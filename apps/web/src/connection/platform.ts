@@ -42,6 +42,7 @@ import * as Ref from "effect/Ref";
 import * as Stream from "effect/Stream";
 import { FetchHttpClient } from "effect/unstable/http";
 
+import { APP_VERSION } from "../branding";
 import { readDesktopPrimaryBearerToken } from "../environments/primary/desktopAuth";
 import { primaryEnvironmentHttpLayer } from "../environments/primary/httpLayer";
 import {
@@ -59,6 +60,7 @@ import {
 } from "./desktopLocal";
 import { sandboxIdFromHostname, shouldProbeCurrentSandboxEnvironment } from "./sandboxPrimaryGate";
 import { connectionStorageLayer } from "./storage";
+import { clientPresentationMetadata } from "./clientMetadata";
 
 let nextObservedRpcRequestId = 0;
 
@@ -115,12 +117,19 @@ const wakeupsLayer = Wakeups.layer({
 });
 
 function clientMetadata() {
-  const desktop = window.desktopBridge !== undefined;
-  const platform = navigator.platform.trim();
+  const metadata = clientPresentationMetadata({
+    appVersion: APP_VERSION,
+    hosted: isHostedStaticApp(),
+    identity: {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      maxTouchPoints: navigator.maxTouchPoints,
+    },
+    desktopBridge: window.desktopBridge,
+  });
   return {
-    label: desktop ? "Boundly Desktop" : "Boundly Web",
-    deviceType: "desktop" as const,
-    ...(platform === "" ? {} : { os: platform }),
+    ...metadata,
+    label: metadata.surface === "desktop" ? "Boundly Desktop" : "Boundly Web",
   };
 }
 
@@ -178,6 +187,9 @@ const capabilitiesLayer = Layer.effectContext(
       scopes: AuthStandardClientScopes,
     });
     const cloudSession = CloudSession.of({
+      identity: Effect.sync(() =>
+        Option.fromNullishOr(appAtomRegistry.get(managedRelaySessionAtom)),
+      ),
       clerkToken: Effect.gen(function* () {
         const session = appAtomRegistry.get(managedRelaySessionAtom);
         if (session === null) {

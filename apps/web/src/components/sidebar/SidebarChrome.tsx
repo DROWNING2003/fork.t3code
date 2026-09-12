@@ -1,14 +1,22 @@
-import { ChartNoAxesColumnIcon, CloudIcon, GitPullRequestIcon, SettingsIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  ChartNoAxesColumnIcon,
+  CloudIcon,
+  GitPullRequestIcon,
+  SettingsIcon,
+} from "lucide-react";
+import type { ReactNode } from "react";
 import { memo, useCallback } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useCanGoBack, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { useEnvironmentIdentificationMode } from "../../hooks/useSettings";
 import { cn } from "../../lib/utils";
-import { usePrimaryEnvironment } from "../../state/environments";
+import { useEnvironments } from "../../state/environments";
 import { isSandboxOnlyWeb } from "../../webSurface";
 import {
   resolveEnvironmentIdentificationPillLabel,
   resolveSidebarStageBackdropVariant,
+  resolveSidebarStageFocusRingOffsetClass,
   SidebarStageBackdrop,
   useEnvironmentStageLabel,
 } from "../SidebarStageBackdrop";
@@ -22,8 +30,10 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "../ui/sidebar";
+import { Tooltip, TooltipPopup, TooltipTrigger } from "../ui/tooltip";
+import { readPullRequestListPreferences } from "../pullRequest/pullRequestListPreferences";
 import { SidebarProviderUpdatePill } from "./SidebarProviderUpdatePill";
-import { SidebarUpdatePill } from "./SidebarUpdatePill";
+import { SidebarUpdateArchitectureWarning, SidebarUpdatePill } from "./SidebarUpdatePill";
 
 export const SidebarChromeHeader = memo(function SidebarChromeHeader({
   isElectron,
@@ -53,13 +63,14 @@ export const SidebarChromeHeader = memo(function SidebarChromeHeader({
         className={cn(
           "relative z-10 md:hidden",
           backdropVariant &&
-            "[:hover,[data-pressed]]:bg-white/15 focus-visible:ring-white/90 focus-visible:ring-offset-blue-700 [&_svg]:stroke-white/90! [&_svg]:opacity-100! [&_svg]:hover:stroke-white!",
+            "focus-visible:ring-white/90 [&_svg]:stroke-white/90! [&_svg]:opacity-100! [&_svg]:hover:stroke-white! [:hover,[data-pressed]]:bg-white/15",
+          backdropVariant && resolveSidebarStageFocusRingOffsetClass(backdropVariant),
         )}
       />
       <SidebarBrand onBackdrop={backdropVariant !== null} />
       {pillLabel ? (
         <Badge
-          className="relative z-10 ml-1 rounded-full px-1.5 text-muted-foreground"
+          className="relative z-10 ml-1 hidden rounded-full px-1.5 text-muted-foreground @[15rem]/sidebar-header:inline-flex"
           data-environment-identification="pill"
           size="sm"
           variant="secondary"
@@ -76,7 +87,7 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
     <Link
       aria-label="Go to threads"
       className={cn(
-        "sidebar-brand relative z-10 ml-[var(--workspace-titlebar-content-left)] h-7 w-fit min-w-0 shrink-0 items-center gap-1 overflow-hidden rounded-md outline-hidden ring-ring focus-visible:ring-2",
+        "relative z-10 ml-[var(--workspace-titlebar-content-left)] hidden h-7 w-fit min-w-0 shrink-0 items-center overflow-hidden rounded-md outline-hidden ring-ring focus-visible:ring-2 md:flex",
         onBackdrop ? "text-white" : "text-foreground",
       )}
       to="/"
@@ -93,12 +104,53 @@ function SidebarBrand({ onBackdrop }: { onBackdrop: boolean }) {
   );
 }
 
-export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
+function SidebarUtilityItem({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <SidebarMenuItem className="shrink-0">
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <SidebarMenuButton aria-label={label} onClick={onClick} size="icon">
+              {icon}
+            </SidebarMenuButton>
+          }
+        />
+        <TooltipPopup side="top">{label}</TooltipPopup>
+      </Tooltip>
+    </SidebarMenuItem>
+  );
+}
+
+export const SidebarUtilityMenu = memo(function SidebarUtilityMenu() {
   const navigate = useNavigate();
+  const canGoBack = useCanGoBack();
   const { isMobile, setOpenMobile } = useSidebar();
-  const primaryEnvironment = usePrimaryEnvironment();
-  const pullRequestsSupported =
-    primaryEnvironment?.serverConfig?.environment.capabilities.pullRequests === true;
+  const currentFooterPage = useLocation({
+    select: (location) =>
+      /^\/settings(?:\/|$)/.test(location.pathname)
+        ? "settings"
+        : /^\/projects\/[^/]+\/?$/.test(location.pathname)
+          ? "project-settings"
+          : location.pathname === "/usage"
+            ? "usage"
+            : location.pathname === "/pull-requests"
+              ? "pull-requests"
+              : null,
+  });
+  const { environments } = useEnvironments();
+  // The page reads every connected server, so one of them offering pull requests is enough for
+  // the link to lead somewhere.
+  const pullRequestsSupported = environments.some(
+    (environment) => environment.serverConfig?.environment.capabilities.pullRequests === true,
+  );
   const closeMobileSidebar = useCallback(() => {
     if (isMobile) {
       setOpenMobile(false);
@@ -106,21 +158,20 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   }, [isMobile, setOpenMobile]);
   const handlePullRequestsClick = useCallback(() => {
     closeMobileSidebar();
-    void navigate({ to: "/pull-requests", search: { involvement: "all", state: "open" } });
+    void navigate({
+      to: "/pull-requests",
+      search: readPullRequestListPreferences(),
+    });
   }, [closeMobileSidebar, navigate]);
-  const handleNav = useCallback(
-    (to: "/settings" | "/settings/sandbox" | "/sandboxes") => {
-      closeMobileSidebar();
-      void navigate({ to });
-    },
-    [closeMobileSidebar, navigate],
-  );
   const handleSettingsClick = useCallback(() => {
-    handleNav(isSandboxOnlyWeb ? "/settings/sandbox" : "/settings");
-  }, [handleNav]);
+    closeMobileSidebar();
+    void navigate({ to: isSandboxOnlyWeb ? "/settings/sandbox" : "/settings" });
+  }, [closeMobileSidebar, navigate]);
+
   const handleSandboxesClick = useCallback(() => {
-    handleNav("/sandboxes");
-  }, [handleNav]);
+    closeMobileSidebar();
+    void navigate({ to: "/sandboxes" });
+  }, [closeMobileSidebar, navigate]);
 
   const handleUsageClick = useCallback(() => {
     if (isMobile) {
@@ -129,38 +180,61 @@ export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
     void navigate({ to: "/usage" });
   }, [isMobile, navigate, setOpenMobile]);
 
+  const handleBackClick = useCallback(() => {
+    closeMobileSidebar();
+    if (canGoBack) {
+      window.history.back();
+      return;
+    }
+    void navigate({ to: "/" });
+  }, [canGoBack, closeMobileSidebar, navigate]);
+
+  return (
+    <SidebarMenu className="flex-row items-center">
+      {currentFooterPage ? (
+        <SidebarMenuItem className="min-w-0 flex-1">
+          <SidebarMenuButton onClick={handleBackClick}>
+            <ArrowLeftIcon />
+            <span>Back</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ) : (
+        <>
+          <SidebarUtilityItem
+            icon={<SettingsIcon />}
+            label="Settings"
+            onClick={handleSettingsClick}
+          />
+          {pullRequestsSupported ? (
+            <SidebarUtilityItem
+              icon={<GitPullRequestIcon />}
+              label="Pull Requests"
+              onClick={handlePullRequestsClick}
+            />
+          ) : null}
+          <SidebarUtilityItem
+            icon={<ChartNoAxesColumnIcon />}
+            label="Usage"
+            onClick={handleUsageClick}
+          />
+          <SidebarUtilityItem
+            icon={<CloudIcon />}
+            label={isSandboxOnlyWeb ? "沙箱" : "Sandbox"}
+            onClick={handleSandboxesClick}
+          />
+        </>
+      )}
+      <SidebarUpdatePill />
+    </SidebarMenu>
+  );
+});
+
+export const SidebarChromeFooter = memo(function SidebarChromeFooter() {
   return (
     <SidebarFooter className="p-[var(--sidebar-content-inset)]">
       <SidebarProviderUpdatePill />
-      <SidebarUpdatePill />
-      <SidebarMenu>
-        {pullRequestsSupported ? (
-          <SidebarMenuItem>
-            <SidebarMenuButton onClick={handlePullRequestsClick}>
-              <GitPullRequestIcon />
-              <span>Pull Requests</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        ) : null}
-        <SidebarMenuItem>
-          <SidebarMenuButton onClick={handleUsageClick}>
-            <ChartNoAxesColumnIcon />
-            <span>Usage</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton onClick={handleSandboxesClick}>
-            <CloudIcon />
-            <span>{isSandboxOnlyWeb ? "沙箱" : "Sandbox"}</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-        <SidebarMenuItem>
-          <SidebarMenuButton onClick={handleSettingsClick}>
-            <SettingsIcon />
-            <span>Settings</span>
-          </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
+      <SidebarUpdateArchitectureWarning />
+      <SidebarUtilityMenu />
     </SidebarFooter>
   );
 });

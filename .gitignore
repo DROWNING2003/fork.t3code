@@ -25,11 +25,15 @@ __screenshots__/
 squashfs-root/
 .vercel
 .gstack/
+.plans/
 dist-electron/
 .electron-runtime/
 .showcase/
 apps/mobile/.showcase/
+apps/mobile/.generated/
+/.generated/
 artifacts/app-store/screenshots/
+.github/pr-assets/
 native/**/target/
 node_modules/
 .alchemy/
@@ -37,3 +41,6 @@ node_modules/
 .env*
 !.env.example
 apps/web/public/t3-server-dist.tar.gz
+
+# pnpm content-addressable store; never belongs in the repo.
+.pnpm-store/
